@@ -12,42 +12,50 @@ export async function middleware(request: NextRequest) {
     const protectedRoutes = ['/dashboard', '/settings', '/onboarding'];
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
-    // Check for session
+    // Check for session (existing JWT OR NextAuth)
     const session = request.cookies.get('session')?.value;
+    const nextAuthSession = request.cookies.get('next-auth.session-token')?.value
+        || request.cookies.get('__Secure-next-auth.session-token')?.value;
 
     if (isProtectedRoute) {
         // No session = redirect to login
-        if (!session) {
+        if (!session && !nextAuthSession) {
             const loginUrl = new URL('/login', request.nextUrl.origin);
             loginUrl.searchParams.set('callbackUrl', pathname);
             return NextResponse.redirect(loginUrl);
         }
 
-        // Verify JWT
-        try {
-            await jwtVerify(session, key, { algorithms: ['HS256'] });
-        } catch {
-            const loginUrl = new URL('/login', request.nextUrl.origin);
-            return NextResponse.redirect(loginUrl);
+        // If NextAuth session exists, allow access (NextAuth handles its own JWT verification)
+        if (nextAuthSession) {
+            // For dashboard routes with NextAuth, skip portfolio check (OAuth users are auto-complete)
+            return NextResponse.next();
         }
 
-        // For dashboard routes, check portfolio completion via cookie
-        // The cookie is set after login/registration by the client
-        if (pathname.startsWith('/dashboard')) {
-            const portfolioComplete = request.cookies.get('portfolio_complete')?.value;
-
-            // If explicitly incomplete, redirect to onboarding
-            if (portfolioComplete === 'false') {
-                return NextResponse.redirect(new URL('/onboarding', request.nextUrl.origin));
+        // Verify existing JWT session
+        if (session) {
+            try {
+                await jwtVerify(session, key, { algorithms: ['HS256'] });
+            } catch {
+                const loginUrl = new URL('/login', request.nextUrl.origin);
+                return NextResponse.redirect(loginUrl);
             }
-        }
 
-        // If on onboarding and portfolio is complete, redirect to dashboard
-        if (pathname.startsWith('/onboarding')) {
-            const portfolioComplete = request.cookies.get('portfolio_complete')?.value;
+            // For dashboard routes, check portfolio completion via cookie
+            if (pathname.startsWith('/dashboard')) {
+                const portfolioComplete = request.cookies.get('portfolio_complete')?.value;
 
-            if (portfolioComplete === 'true') {
-                return NextResponse.redirect(new URL('/dashboard', request.nextUrl.origin));
+                if (portfolioComplete === 'false') {
+                    return NextResponse.redirect(new URL('/onboarding', request.nextUrl.origin));
+                }
+            }
+
+            // If on onboarding and portfolio is complete, redirect to dashboard
+            if (pathname.startsWith('/onboarding')) {
+                const portfolioComplete = request.cookies.get('portfolio_complete')?.value;
+
+                if (portfolioComplete === 'true') {
+                    return NextResponse.redirect(new URL('/dashboard', request.nextUrl.origin));
+                }
             }
         }
     }
@@ -58,4 +66,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
     matcher: ['/dashboard/:path*', '/settings/:path*', '/onboarding/:path*'],
 };
-
