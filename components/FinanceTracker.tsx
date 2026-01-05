@@ -8,6 +8,7 @@ export default function FinanceTracker() {
     const [budget, setBudget] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isReportView, setIsReportView] = useState(false);
+    const [showAllExpenses, setShowAllExpenses] = useState(false);
 
     // Expense Form
     const [amount, setAmount] = useState('');
@@ -600,14 +601,24 @@ export default function FinanceTracker() {
 
                 {/* Recent Expenses */}
                 <div className="bg-white dark:bg-[#161b22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Recent Expenses</h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Recent Expenses</h3>
+                        {expenses.length > 5 && (
+                            <button
+                                onClick={() => setShowAllExpenses(!showAllExpenses)}
+                                className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors"
+                            >
+                                {showAllExpenses ? '▲ Show Less' : `▼ Show All (${expenses.length})`}
+                            </button>
+                        )}
+                    </div>
                     {loading ? (
                         <p className="text-gray-500 dark:text-gray-400">Loading...</p>
                     ) : expenses.length === 0 ? (
                         <p className="text-gray-500 dark:text-gray-400">No expenses yet.</p>
                     ) : (
-                        <div className="space-y-3">
-                            {expenses.slice(0, 5).map((expense) => (
+                        <div className={`space-y-3 ${showAllExpenses ? 'max-h-96 overflow-y-auto' : ''}`}>
+                            {(showAllExpenses ? expenses : expenses.slice(0, 5)).map((expense) => (
                                 <div
                                     key={expense.id}
                                     className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#0d1117] transition-colors"
