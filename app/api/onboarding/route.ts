@@ -41,19 +41,19 @@ export async function GET() {
                 careerGoal: user.careerGoal,
                 portfolioComplete: user.portfolioComplete,
             },
-            skills: user.portfolioSkills.map(s => ({
+            skills: user.portfolioSkills.map((s: any) => ({
                 name: s.name,
                 level: s.level,
                 category: s.category,
             })),
-            education: user.education.map(e => ({
+            education: user.education.map((e: any) => ({
                 institution: e.institution,
                 degree: e.degree,
                 field: e.field,
                 startYear: e.startYear,
                 endYear: e.endYear,
             })),
-            links: user.contactLinks.map(l => ({
+            links: user.contactLinks.map((l: any) => ({
                 type: l.type,
                 url: l.url,
                 label: l.label,
