@@ -27,6 +27,11 @@ model User {
   portfolioComplete Boolean @default(false)  // Gates dashboard access
   isAdmin          Boolean @default(false)   // Admin panel access
   
+  // Role & Status
+  role             String   @default("user")    // "admin" | "user"
+  status           String   @default("active")  // "active" | "suspended" | "deleted"
+  deletedAt        DateTime?                     // Soft delete timestamp
+  
   // Rating System
   rating         Int      @default(1000) // Restricted Codeforces style
   rank           String   @default("Newbie")
@@ -60,6 +65,11 @@ model User {
   
   ratingHistory  RatingHistory[]
   incomes        Income[]
+  
+  // Admin Relations
+  adminLogs        AdminLog[]  @relation("AdminLogs")
+  targetedByLogs   AdminLog[]  @relation("TargetLogs")
+  passwordResets   PasswordResetRequest[]
   
   resumeUrl      String?  // URL to resume/CV file
 }
@@ -346,4 +356,40 @@ model PortfolioCPStats {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Admin Action Audit Log
+model AdminLog {
+  id            String   @id @default(uuid())
+  adminId       String
+  admin         User     @relation("AdminLogs", fields: [adminId], references: [id])
+  
+  actionType    String   // "VERIFY", "SUSPEND", "UNSUSPEND", "DELETE", "REJECT", etc.
+  targetUserId  String?
+  targetUser    User?    @relation("TargetLogs", fields: [targetUserId], references: [id])
+  
+  details       String?  // JSON with additional details
+  ipAddress     String?
+  
+  createdAt     DateTime @default(now())
+  
+  @@index([adminId])
+  @@index([targetUserId])
+  @@index([createdAt])
+}
+
+// Password Reset Requests
+model PasswordResetRequest {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  token     String   @unique
+  status    String   @default("pending") // "pending" | "used" | "invalidated"
+  expiresAt DateTime
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([status])
 }

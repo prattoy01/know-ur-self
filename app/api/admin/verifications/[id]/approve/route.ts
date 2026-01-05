@@ -22,7 +22,7 @@ export async function POST(
         }
 
         if (user.emailVerified) {
-            return NextResponse.json({ error: 'User is already verified' }, { status: 400 });
+            return NextResponse.json({ error: 'Already verified' }, { status: 400 });
         }
 
         await prisma.user.update({
@@ -32,7 +32,7 @@ export async function POST(
 
         await logAdminAction(
             admin.id,
-            'VERIFY_USER',
+            'APPROVE_VERIFICATION',
             id,
             { email: user.email },
             getClientIP(request)
@@ -40,7 +40,7 @@ export async function POST(
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('Verify user error:', error);
-        return NextResponse.json({ error: 'Failed to verify user' }, { status: 500 });
+        console.error('Approve verification error:', error);
+        return NextResponse.json({ error: 'Failed to approve' }, { status: 500 });
     }
 }

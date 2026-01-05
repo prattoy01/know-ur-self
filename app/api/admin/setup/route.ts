@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
             where: { email },
             data: {
                 isAdmin: true,
+                role: 'admin',
                 emailVerified: user.emailVerified || new Date()
             }
         });

@@ -1,50 +1,110 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import jwt from 'jsonwebtoken';
+import { verifyAdmin, logAdminAction, getClientIP, unauthorizedResponse } from '@/lib/adminAuth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+// GET - Full user details with activity summary
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const admin = await verifyAdmin(request);
+    if (!admin) return unauthorizedResponse();
 
-async function verifyAdmin(request: NextRequest) {
-    const token = request.cookies.get('token')?.value;
-    if (!token) return null;
+    const { id } = await params;
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
         const user = await prisma.user.findUnique({
-            where: { id: decoded.userId },
-            select: { id: true, isAdmin: true }
+            where: { id },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                username: true,
+                bio: true,
+                emailVerified: true,
+                role: true,
+                status: true,
+                isAdmin: true,
+                rating: true,
+                rank: true,
+                currentStreak: true,
+                portfolioComplete: true,
+                lastActiveDate: true,
+                createdAt: true,
+                deletedAt: true,
+                _count: {
+                    select: {
+                        activities: true,
+                        expenses: true,
+                        tasks: true,
+                        studySessions: true,
+                    }
+                }
+            }
         });
-        if (!user?.isAdmin) return null;
-        return user;
-    } catch {
-        return null;
+
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        return NextResponse.json(user);
+    } catch (error) {
+        console.error('User details error:', error);
+        return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 });
     }
 }
 
+// DELETE - Soft delete user
 export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     const admin = await verifyAdmin(request);
-    if (!admin) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!admin) return unauthorizedResponse();
 
     const { id } = await params;
 
-    // Prevent admin from deleting themselves
+    // Prevent self-deletion
     if (id === admin.id) {
         return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
 
     try {
-        // Delete user and all related data (cascade)
-        await prisma.user.delete({
-            where: { id }
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: { email: true, status: true, role: true }
         });
+
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        // Cannot delete another admin
+        if (user.role === 'admin') {
+            return NextResponse.json({ error: 'Cannot delete admin users' }, { status: 403 });
+        }
+
+        // Soft delete
+        await prisma.user.update({
+            where: { id },
+            data: {
+                status: 'deleted',
+                deletedAt: new Date()
+            }
+        });
+
+        // Log action
+        await logAdminAction(
+            admin.id,
+            'DELETE_USER',
+            id,
+            { email: user.email },
+            getClientIP(request)
+        );
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        console.error('Delete user error:', error);
+        return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
     }
 }
