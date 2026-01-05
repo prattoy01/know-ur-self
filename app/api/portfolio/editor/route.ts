@@ -194,7 +194,7 @@ export async function POST(request: Request) {
         }
 
         // Transaction to update everything
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
             // 1. Update User
             await tx.user.update({
                 where: { id: session.userId },
