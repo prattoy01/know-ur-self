@@ -87,35 +87,29 @@ export default function ActivityTracker() {
     // Alarm Sound and Confetti
     const playAlarm = () => {
         try {
-            // Use Web Audio API for reliable sound
+            // Use Web Audio API for reliable 5-second alarm
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+            // Play beeps for 5 seconds (10 beeps, 0.5s apart)
+            for (let i = 0; i < 10; i++) {
+                const startTime = audioContext.currentTime + (i * 0.5);
 
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
 
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
 
-            // Play second beep
-            setTimeout(() => {
-                const osc2 = audioContext.createOscillator();
-                const gain2 = audioContext.createGain();
-                osc2.connect(gain2);
-                gain2.connect(audioContext.destination);
-                osc2.frequency.value = 1000;
-                osc2.type = 'sine';
-                gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-                osc2.start(audioContext.currentTime);
-                osc2.stop(audioContext.currentTime + 0.5);
-            }, 200);
+                // Alternate between two frequencies for a pleasant alarm
+                oscillator.frequency.value = i % 2 === 0 ? 800 : 1000;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, startTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+
+                oscillator.start(startTime);
+                oscillator.stop(startTime + 0.3);
+            }
         } catch (e) {
             console.error("Failed to play alarm", e);
         }
