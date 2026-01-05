@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function FinanceTracker() {
     const [expenses, setExpenses] = useState<any[]>([]);
@@ -105,6 +107,79 @@ export default function FinanceTracker() {
     const remaining = budgetLimit - totalSpent;
     const percentage = budgetLimit > 0 ? Math.min((totalSpent / budgetLimit) * 100, 100) : 0;
 
+    const downloadPDF = () => {
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFontSize(20);
+        doc.text("Finance & Budget Report", 14, 22);
+
+        doc.setFontSize(11);
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 30);
+
+        // Summary
+        doc.setFontSize(14);
+        doc.text("Summary", 14, 45);
+
+        const summaryData = [
+            ['Total Income', `$${totalIncome.toFixed(2)}`],
+            ['Total Expenses', `$${totalSpent.toFixed(2)}`],
+            ['Net Balance', `$${balance.toFixed(2)}`],
+            ['Budget Limit', `$${budgetLimit.toFixed(2)}`],
+            ['Budget Status', budgetLimit > 0 ? `${percentage.toFixed(0)}% Used` : 'N/A']
+        ];
+
+        autoTable(doc, {
+            startY: 50,
+            head: [['Metric', 'Value']],
+            body: summaryData,
+            theme: 'striped',
+            headStyles: { fillColor: [66, 133, 244] }
+        });
+
+        // Income Table
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const finalY = (doc as any).lastAutoTable.finalY + 15;
+        doc.text("Income History", 14, finalY);
+
+        const incomeRows = incomes.map(item => [
+            new Date(item.date).toLocaleDateString(),
+            item.source,
+            item.description || '-',
+            `$${item.amount.toFixed(2)}`
+        ]);
+
+        autoTable(doc, {
+            startY: finalY + 5,
+            head: [['Date', 'Source', 'Description', 'Amount']],
+            body: incomeRows,
+            theme: 'striped',
+            headStyles: { fillColor: [34, 197, 94] }
+        });
+
+        // Expense Table
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const finalY2 = (doc as any).lastAutoTable.finalY + 15;
+        doc.text("Expense History", 14, finalY2);
+
+        const expenseRows = expenses.map(item => [
+            new Date(item.date).toLocaleDateString(),
+            item.category,
+            item.description || '-',
+            `$${item.amount.toFixed(2)}`
+        ]);
+
+        autoTable(doc, {
+            startY: finalY2 + 5,
+            head: [['Date', 'Category', 'Description', 'Amount']],
+            body: expenseRows,
+            theme: 'striped',
+            headStyles: { fillColor: [239, 68, 68] }
+        });
+
+        doc.save("Finance_Report.pdf");
+    };
+
     // Category icons
     const categoryIcons: Record<string, string> = {
         'FOOD': '🍔',
@@ -130,12 +205,20 @@ export default function FinanceTracker() {
     return (
         <div className="space-y-8">
             {/* Header */}
-            <div>
-                <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-3">
-                    <span className="text-5xl">💰</span>
-                    Budget & Finance
-                </h1>
-                <p className="text-gray-500 dark:text-gray-400 text-lg">Track your income, expenses and manage your monthly budget</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-3">
+                        <span className="text-5xl">💰</span>
+                        Budget & Finance
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">Track your income, expenses and manage your monthly budget</p>
+                </div>
+                <button
+                    onClick={downloadPDF}
+                    className="px-6 py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl font-semibold hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors flex items-center gap-2 shadow-lg"
+                >
+                    <span>📄</span> Download Report
+                </button>
             </div>
 
             {/* Balance & Stats Grid */}
