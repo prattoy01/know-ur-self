@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import confetti from 'canvas-confetti';
 
 type Activity = {
     id: string;
@@ -83,14 +84,63 @@ export default function ActivityTracker() {
         fetchActivities();
     }, []);
 
-    // Alarm Sound (Simple Beep)
+    // Alarm Sound and Confetti
     const playAlarm = () => {
         try {
-            const audio = new Audio('https://codeskulptor-demos.commondatastorage.googleapis.com/Galaxy/galaxy_win.mp3');
-            audio.play().catch(e => console.error("Audio playback blocked", e));
+            // Use Web Audio API for reliable sound
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+
+            // Play second beep
+            setTimeout(() => {
+                const osc2 = audioContext.createOscillator();
+                const gain2 = audioContext.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioContext.destination);
+                osc2.frequency.value = 1000;
+                osc2.type = 'sine';
+                gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                osc2.start(audioContext.currentTime);
+                osc2.stop(audioContext.currentTime + 0.5);
+            }, 200);
         } catch (e) {
             console.error("Failed to play alarm", e);
         }
+
+        // Confetti from both sides!
+        const count = 200;
+        const defaults = { origin: { y: 0.7 }, zIndex: 9999 };
+
+        function fire(particleRatio: number, opts: confetti.Options) {
+            confetti({
+                ...defaults,
+                ...opts,
+                particleCount: Math.floor(count * particleRatio)
+            });
+        }
+
+        // Left side
+        fire(0.25, { spread: 26, startVelocity: 55, origin: { x: 0, y: 0.7 } });
+        fire(0.2, { spread: 60, origin: { x: 0, y: 0.7 } });
+        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8, origin: { x: 0.1, y: 0.7 } });
+
+        // Right side
+        fire(0.25, { spread: 26, startVelocity: 55, origin: { x: 1, y: 0.7 } });
+        fire(0.2, { spread: 60, origin: { x: 1, y: 0.7 } });
+        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8, origin: { x: 0.9, y: 0.7 } });
     };
 
     // Timer tick effect
