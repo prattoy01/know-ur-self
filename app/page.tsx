@@ -26,25 +26,25 @@ export default function Home() {
             </div>
 
             {/* Navigation */}
-            <nav className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
-                <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-2xl">
+            <nav className="relative z-10 flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-xl sm:text-2xl">
                         ⚡
                     </div>
-                    <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                         AntiGravity
                     </span>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                     <Link
                         href="/login"
-                        className="px-6 py-2.5 text-gray-300 hover:text-white transition-colors duration-300 font-medium"
+                        className="px-4 sm:px-6 py-2 sm:py-2.5 text-gray-300 hover:text-white transition-colors duration-300 font-medium text-sm sm:text-base"
                     >
                         Login
                     </Link>
                     <Link
                         href="/register"
-                        className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all duration-300 hover:-translate-y-0.5"
+                        className="hidden sm:inline-block px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all duration-300 hover:-translate-y-0.5"
                     >
                         Get Started
                     </Link>
