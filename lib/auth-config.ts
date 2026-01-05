@@ -67,6 +67,17 @@ export const authOptions: NextAuthOptions = {
             }
             return token;
         },
+        async redirect({ url, baseUrl }) {
+            // Handle callback redirect - always go to dashboard after OAuth
+            if (url.includes('/api/auth/callback')) {
+                return `${baseUrl}/dashboard`;
+            }
+            // Allows relative callback URLs
+            if (url.startsWith('/')) return `${baseUrl}${url}`;
+            // Allows callback URLs on the same origin
+            if (new URL(url).origin === baseUrl) return url;
+            return `${baseUrl}/dashboard`;
+        },
         async signIn({ user, account }) {
             // For OAuth sign-ins, auto-complete portfolio for new/existing users
             if (account?.provider !== 'credentials' && user.email) {
