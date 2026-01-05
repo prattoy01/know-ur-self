@@ -31,7 +31,9 @@ export async function POST(request: Request) {
             }
 
             const user = await prisma.user.findUnique({ where: { id: session.userId } });
-            if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+            if (!user || !user.passwordHash) {
+                return NextResponse.json({ error: 'Cannot change password for OAuth-only accounts' }, { status: 400 });
+            }
 
             const isCorrect = await verifyPassword(currentPassword, user.passwordHash);
             if (!isCorrect) {
