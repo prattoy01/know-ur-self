@@ -41,6 +41,25 @@ export default function ActivityTracker() {
     };
 
     useEffect(() => {
+        // Restore timer state
+        const stored = localStorage.getItem('activity_timer_state');
+        if (stored) {
+            try {
+                const data = JSON.parse(stored);
+                const start = new Date(data.startTime);
+                if (!isNaN(start.getTime())) {
+                    setStartTime(start);
+                    setIsTimerRunning(true);
+                    setType(data.type || 'STUDY');
+                    setName(data.name || '');
+                    setNotes(data.notes || '');
+                    setPlannedDuration(data.plannedDuration || '60');
+                }
+            } catch (e) {
+                console.error("Failed to restore timer state", e);
+                localStorage.removeItem('activity_timer_state');
+            }
+        }
         fetchActivities();
     }, []);
 
@@ -58,9 +77,19 @@ export default function ActivityTracker() {
     }, [isTimerRunning, startTime]);
 
     const handleStartTimer = () => {
-        setStartTime(new Date());
+        const start = new Date();
+        setStartTime(start);
         setIsTimerRunning(true);
         setElapsedSeconds(0);
+
+        // Persist state
+        localStorage.setItem('activity_timer_state', JSON.stringify({
+            startTime: start.toISOString(),
+            type,
+            name,
+            notes,
+            plannedDuration
+        }));
     };
 
     const handleStopTimer = async () => {
@@ -104,7 +133,8 @@ export default function ActivityTracker() {
 
             if (res.ok) {
                 fetchActivities();
-                // Reset form
+                // Reset form and clear storage
+                localStorage.removeItem('activity_timer_state');
                 setName('');
                 setNotes('');
                 setPlannedDuration('60');
