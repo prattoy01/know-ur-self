@@ -40,6 +40,9 @@ export default function ActivityTracker() {
         }
     };
 
+    // State for alarm
+    const [alarmPlayed, setAlarmPlayed] = useState(false);
+
     useEffect(() => {
         // Restore timer state
         const stored = localStorage.getItem('activity_timer_state');
@@ -54,6 +57,7 @@ export default function ActivityTracker() {
                     setName(data.name || '');
                     setNotes(data.notes || '');
                     setPlannedDuration(data.plannedDuration || '60');
+                    setAlarmPlayed(data.alarmPlayed || false);
                 }
             } catch (e) {
                 console.error("Failed to restore timer state", e);
@@ -63,6 +67,19 @@ export default function ActivityTracker() {
         fetchActivities();
     }, []);
 
+    // Alarm Sound (Simple Beep)
+    const playAlarm = () => {
+        try {
+            // A simple pleasant notification sound (Base64 MP3)
+            const audio = new Audio('https://codeskulptor-demos.commondatastorage.googleapis.com/Galaxy/galaxy_win.mp3');
+            // Alternatively use a reliably hosted file or base64. 
+            // Using a public domain sound for reliability.
+            audio.play().catch(e => console.error("Audio playback blocked", e));
+        } catch (e) {
+            console.error("Failed to play alarm", e);
+        }
+    };
+
     // Timer tick effect
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -71,16 +88,30 @@ export default function ActivityTracker() {
                 const now = new Date();
                 const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
                 setElapsedSeconds(elapsed);
+
+                // Check for Alarm
+                const plannedSeconds = Number(plannedDuration) * 60;
+                if (elapsed >= plannedSeconds && !alarmPlayed && plannedSeconds > 0) {
+                    playAlarm();
+                    setAlarmPlayed(true);
+                    // Update persistence immediately so we don't replay on refresh
+                    const currentStored = localStorage.getItem('activity_timer_state');
+                    if (currentStored) {
+                        const data = JSON.parse(currentStored);
+                        localStorage.setItem('activity_timer_state', JSON.stringify({ ...data, alarmPlayed: true }));
+                    }
+                }
             }, 1000);
         }
         return () => clearInterval(interval);
-    }, [isTimerRunning, startTime]);
+    }, [isTimerRunning, startTime, plannedDuration, alarmPlayed]);
 
     const handleStartTimer = () => {
         const start = new Date();
         setStartTime(start);
         setIsTimerRunning(true);
         setElapsedSeconds(0);
+        setAlarmPlayed(false);
 
         // Persist state
         localStorage.setItem('activity_timer_state', JSON.stringify({
@@ -88,7 +119,8 @@ export default function ActivityTracker() {
             type,
             name,
             notes,
-            plannedDuration
+            plannedDuration,
+            alarmPlayed: false
         }));
     };
 
@@ -141,6 +173,7 @@ export default function ActivityTracker() {
                 setIsTimerRunning(false);
                 setStartTime(null);
                 setElapsedSeconds(0);
+                setAlarmPlayed(false);
             } else {
                 const error = await res.json();
                 console.error('Failed to log activity:', error);
