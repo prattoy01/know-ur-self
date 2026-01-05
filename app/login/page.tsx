@@ -47,7 +47,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex min-h-screen overflow-hidden">
             {/* Left Panel - Productivity Themed Onboarding */}
             <div className="hidden lg:flex flex-1 relative items-center justify-center p-16 overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600">
                 {/* Decorative Animated Shapes */}
@@ -132,7 +132,7 @@ export default function LoginPage() {
             </div>
 
             {/* Right Panel - Login Form */}
-            <div className="flex-1 bg-gray-50 flex items-center justify-center p-16">
+            <div className="flex-1 bg-gray-50 flex items-center justify-center p-4 sm:p-8 lg:p-16 overflow-y-auto">
                 <div className="w-full max-w-md">
                     {/* Logo */}
                     <div className="text-center mb-10">

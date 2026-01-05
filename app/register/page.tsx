@@ -35,7 +35,7 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex min-h-screen overflow-hidden">
             {/* Left Panel - Onboarding */}
             <div className="hidden lg:flex flex-1 relative items-center justify-center p-16 overflow-hidden bg-gradient-to-br from-purple-600 to-purple-500">
                 {/* Decorative Animated Shapes */}
@@ -111,7 +111,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Right Panel - Register Form */}
-            <div className="flex-1 bg-gray-50 flex items-center justify-center p-16">
+            <div className="flex-1 bg-gray-50 flex items-center justify-center p-4 sm:p-8 lg:p-16 overflow-y-auto">
                 <div className="w-full max-w-md">
                     {/* Logo */}
                     <div className="text-center mb-10">
