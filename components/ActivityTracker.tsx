@@ -23,8 +23,8 @@ export default function ActivityTracker() {
 
     // Timer State
     const [isTimerRunning, setIsTimerRunning] = useState(false);
-    const [startTime, setStartTime] = useState<Date | null>(null);
-    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+    const [targetTime, setTargetTime] = useState<Date | null>(null);
+    const [remainingSeconds, setRemainingSeconds] = useState(0);
 
     const fetchActivities = async () => {
         try {
@@ -49,15 +49,31 @@ export default function ActivityTracker() {
         if (stored) {
             try {
                 const data = JSON.parse(stored);
-                const start = new Date(data.startTime);
-                if (!isNaN(start.getTime())) {
-                    setStartTime(start);
-                    setIsTimerRunning(true);
-                    setType(data.type || 'STUDY');
-                    setName(data.name || '');
-                    setNotes(data.notes || '');
-                    setPlannedDuration(data.plannedDuration || '60');
-                    setAlarmPlayed(data.alarmPlayed || false);
+                // Check if targetTime exists (new format)
+                if (data.targetTime) {
+                    const target = new Date(data.targetTime);
+                    if (!isNaN(target.getTime())) {
+                        setTargetTime(target);
+                        setIsTimerRunning(true); // Temporarily true, effect will correct if expired
+                        setType(data.type || 'STUDY');
+                        setName(data.name || '');
+                        setNotes(data.notes || '');
+                        setPlannedDuration(data.plannedDuration || '60');
+                        setAlarmPlayed(data.alarmPlayed || false);
+
+                        // Calculate immediate remaining
+                        const now = new Date();
+                        const diff = Math.ceil((target.getTime() - now.getTime()) / 1000);
+                        setRemainingSeconds(Math.max(0, diff));
+
+                        // If expired while away
+                        if (diff <= 0) {
+                            setIsTimerRunning(false);
+                            // Don't auto-stop/log here, let user see 00:00 and stop manually or just reset?
+                            // User asked for "stop at zero".
+                            // If we come back and it's done, we show 00:00 and let them log.
+                        }
+                    }
                 }
             } catch (e) {
                 console.error("Failed to restore timer state", e);
@@ -70,10 +86,7 @@ export default function ActivityTracker() {
     // Alarm Sound (Simple Beep)
     const playAlarm = () => {
         try {
-            // A simple pleasant notification sound (Base64 MP3)
             const audio = new Audio('https://codeskulptor-demos.commondatastorage.googleapis.com/Galaxy/galaxy_win.mp3');
-            // Alternatively use a reliably hosted file or base64. 
-            // Using a public domain sound for reliability.
             audio.play().catch(e => console.error("Audio playback blocked", e));
         } catch (e) {
             console.error("Failed to play alarm", e);
@@ -83,39 +96,47 @@ export default function ActivityTracker() {
     // Timer tick effect
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (isTimerRunning && startTime) {
+        if (isTimerRunning && targetTime) {
             interval = setInterval(() => {
                 const now = new Date();
-                const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-                setElapsedSeconds(elapsed);
+                const diff = Math.ceil((targetTime.getTime() - now.getTime()) / 1000);
 
-                // Check for Alarm
-                const plannedSeconds = Number(plannedDuration) * 60;
-                if (elapsed >= plannedSeconds && !alarmPlayed && plannedSeconds > 0) {
-                    playAlarm();
-                    setAlarmPlayed(true);
-                    // Update persistence immediately so we don't replay on refresh
-                    const currentStored = localStorage.getItem('activity_timer_state');
-                    if (currentStored) {
-                        const data = JSON.parse(currentStored);
-                        localStorage.setItem('activity_timer_state', JSON.stringify({ ...data, alarmPlayed: true }));
+                if (diff <= 0) {
+                    // Timer Finished
+                    setRemainingSeconds(0);
+                    setIsTimerRunning(false); // Stop the timer logic
+
+                    if (!alarmPlayed) {
+                        playAlarm();
+                        setAlarmPlayed(true);
+                        // Update persistence
+                        const currentStored = localStorage.getItem('activity_timer_state');
+                        if (currentStored) {
+                            const data = JSON.parse(currentStored);
+                            localStorage.setItem('activity_timer_state', JSON.stringify({ ...data, alarmPlayed: true }));
+                        }
                     }
+                } else {
+                    setRemainingSeconds(diff);
                 }
             }, 1000);
         }
         return () => clearInterval(interval);
-    }, [isTimerRunning, startTime, plannedDuration, alarmPlayed]);
+    }, [isTimerRunning, targetTime, alarmPlayed]);
 
     const handleStartTimer = () => {
-        const start = new Date();
-        setStartTime(start);
+        const durationMins = parseInt(plannedDuration) || 60;
+        const now = new Date();
+        const target = new Date(now.getTime() + durationMins * 60000);
+
+        setTargetTime(target);
         setIsTimerRunning(true);
-        setElapsedSeconds(0);
+        setRemainingSeconds(durationMins * 60);
         setAlarmPlayed(false);
 
         // Persist state
         localStorage.setItem('activity_timer_state', JSON.stringify({
-            startTime: start.toISOString(),
+            targetTime: target.toISOString(),
             type,
             name,
             notes,
@@ -125,25 +146,30 @@ export default function ActivityTracker() {
     };
 
     const handleStopTimer = async () => {
-        if (!startTime) return;
+        // Calculate duration based on what happened
+        // If remaining > 0, we stopped early. Duration = Planned - Remaining.
+        // If remaining == 0, Duration = Planned.
 
-        // Calculate duration, minimum 1 minute
-        const actualDurationMinutes = Math.max(1, Math.floor(elapsedSeconds / 60));
         const plannedMin = Number(plannedDuration);
+        const remainingMin = remainingSeconds / 60;
+        let actualDurationMinutes = Math.floor(plannedMin - remainingMin);
 
-        // Check if stopping early
-        if (actualDurationMinutes < plannedMin) {
-            const shortfall = plannedMin - actualDurationMinutes;
+        // Safety check
+        actualDurationMinutes = Math.max(1, actualDurationMinutes);
+
+        // Check if stopping early (significant margin)
+        if (remainingSeconds > 60) { // More than 1 minute remaining
+            const shortfall = Math.ceil(remainingMin);
             const shortfallPercent = Math.round((shortfall / plannedMin) * 100);
             const penaltyPoints = Math.round((shortfall / plannedMin) * 50);
 
             const confirmed = window.confirm(
                 `⚠️ Early Stop Warning!\n\n` +
                 `Planned: ${plannedMin} minutes\n` +
-                `Actual: ${actualDurationMinutes} minutes\n` +
-                `Shortfall: ${shortfall} minutes (${shortfallPercent}%)\n\n` +
+                `Remaining: ${shortfall} minutes\n` +
+                `Shortfall: ${shortfallPercent}%\n\n` +
                 `📉 RATING PENALTY: -${penaltyPoints} points\n\n` +
-                `This will hurt your Daily Performance Score and lower your rating.\n\n` +
+                `This will hurt your Daily Performance Score.\n` +
                 `Are you sure you want to stop early?`
             );
 
@@ -171,8 +197,8 @@ export default function ActivityTracker() {
                 setNotes('');
                 setPlannedDuration('60');
                 setIsTimerRunning(false);
-                setStartTime(null);
-                setElapsedSeconds(0);
+                setTargetTime(null);
+                setRemainingSeconds(0);
                 setAlarmPlayed(false);
             } else {
                 const error = await res.json();
@@ -197,12 +223,7 @@ export default function ActivityTracker() {
     // Calculate statistics
     const totalMinutes = activities.reduce((acc, act) => acc + act.duration, 0);
     const totalHours = Math.floor(totalMinutes / 60);
-    const remainingMinutes = totalMinutes % 60;
-
-    const activityByType = activities.reduce((acc: any, act) => {
-        acc[act.type] = (acc[act.type] || 0) + act.duration;
-        return acc;
-    }, {});
+    const remainingStatsMinutes = totalMinutes % 60; // Renamed to avoid conflict with state
 
     const todayActivities = activities.filter(act => {
         const actDate = new Date(act.date);
@@ -212,10 +233,10 @@ export default function ActivityTracker() {
 
     const todayMinutes = todayActivities.reduce((acc, act) => acc + act.duration, 0);
 
-    // Format elapsed time
-    const hours = Math.floor(elapsedSeconds / 3600);
-    const minutes = Math.floor((elapsedSeconds % 3600) / 60);
-    const seconds = elapsedSeconds % 60;
+    // Format remaining time
+    const hours = Math.floor(remainingSeconds / 3600);
+    const minutes = Math.floor((remainingSeconds % 3600) / 60);
+    const seconds = remainingSeconds % 60;
     const formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
     return (
@@ -226,14 +247,14 @@ export default function ActivityTracker() {
                     <span className="text-5xl">⏱️</span>
                     Activity Tracker
                 </h1>
-                <p className="text-gray-500 dark:text-gray-400 text-lg">Timer-based activity tracking (strict mode)</p>
+                <p className="text-gray-500 dark:text-gray-400 text-lg">Countdown timer & activity logging (strict mode)</p>
             </div>
 
             {/* Statistics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
                     <div className="text-sm opacity-90 mb-1">Total Time</div>
-                    <div className="text-3xl font-bold">{totalHours}h {remainingMinutes}m</div>
+                    <div className="text-3xl font-bold">{totalHours}h {remainingStatsMinutes}m</div>
                 </div>
                 <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
                     <div className="text-sm opacity-90 mb-1">Today</div>
@@ -252,19 +273,19 @@ export default function ActivityTracker() {
                         ⏱️
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Activity Timer</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Set planned time, then start the timer</p>
+                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Countdown Timer</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Timer stops automatically at zero</p>
                     </div>
                 </div>
 
                 {/* Timer Display */}
-                {isTimerRunning && (
+                {(isTimerRunning || remainingSeconds > 0 || targetTime) && (
                     <div className="mb-6 text-center">
-                        <div className="text-6xl font-mono font-bold text-gray-800 dark:text-gray-100 mb-2">
+                        <div className={`text-6xl font-mono font-bold mb-2 ${remainingSeconds === 0 ? 'text-green-500 dark:text-green-400 animate-pulse' : 'text-gray-800 dark:text-gray-100'}`}>
                             {formattedTime}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Planned: {plannedDuration}m | Current: {Math.floor(elapsedSeconds / 60)}m
+                            {remainingSeconds === 0 ? '✨ Session Complete!' : `Planned: ${plannedDuration}m remaining`}
                         </div>
                     </div>
                 )}
@@ -279,7 +300,7 @@ export default function ActivityTracker() {
                             className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
                             value={type}
                             onChange={(e) => setType(e.target.value)}
-                            disabled={isTimerRunning}
+                            disabled={isTimerRunning || !!targetTime}
                         >
                             <option value="STUDY">📚 Study</option>
                             <option value="CODE">💻 Code</option>
@@ -300,7 +321,7 @@ export default function ActivityTracker() {
                             min="1"
                             value={plannedDuration}
                             onChange={(e) => setPlannedDuration(e.target.value)}
-                            disabled={isTimerRunning}
+                            disabled={isTimerRunning || !!targetTime}
                             placeholder="e.g., 60"
                         />
                     </div>
@@ -315,7 +336,7 @@ export default function ActivityTracker() {
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            disabled={isTimerRunning}
+                            disabled={isTimerRunning || !!targetTime}
                             placeholder="e.g., Calculus homework"
                         />
                     </div>
@@ -330,26 +351,26 @@ export default function ActivityTracker() {
                             rows={3}
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            disabled={isTimerRunning}
+                            disabled={isTimerRunning || !!targetTime}
                             placeholder="What did you work on?"
                         />
                     </div>
 
                     {/* Timer Controls */}
                     <div className="flex gap-4">
-                        {!isTimerRunning ? (
+                        {!targetTime ? (
                             <button
                                 onClick={handleStartTimer}
                                 className="flex-1 px-6 py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-green-500/40 transition-all duration-300 text-lg"
                             >
-                                ▶️ Start Timer
+                                ▶️ Start Countdown
                             </button>
                         ) : (
                             <button
                                 onClick={handleStopTimer}
-                                className="flex-1 px-6 py-4 bg-gradient-to-r from-red-400 to-orange-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-red-500/40 transition-all duration-300 text-lg"
+                                className={`flex-1 px-6 py-4 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-lg ${remainingSeconds === 0 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:shadow-blue-500/40' : 'bg-gradient-to-r from-red-400 to-orange-500 hover:shadow-red-500/40'}`}
                             >
-                                ⏹️ Stop & Log Activity
+                                {remainingSeconds === 0 ? '✅ Log Completed Activity' : '⏹️ Stop & Log Activity'}
                             </button>
                         )}
                     </div>
