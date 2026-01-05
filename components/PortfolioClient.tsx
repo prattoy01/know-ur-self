@@ -95,8 +95,8 @@ export default function Portfolio() {
                                         key={item.id}
                                         onClick={() => scrollToSection(item.id)}
                                         className={`px-4 py-2 rounded-lg transition-all duration-300 ${activeSection === item.id
-                                                ? 'bg-purple-600 text-white shadow-lg'
-                                                : 'text-gray-300 hover:bg-slate-800 hover:text-white'
+                                            ? 'bg-purple-600 text-white shadow-lg'
+                                            : 'text-gray-300 hover:bg-slate-800 hover:text-white'
                                             }`}
                                     >
                                         {item.label}
@@ -124,8 +124,8 @@ export default function Portfolio() {
                                     key={item.id}
                                     onClick={() => scrollToSection(item.id)}
                                     className={`block w-full text-left px-3 py-2 rounded-lg transition-all ${activeSection === item.id
-                                            ? 'bg-purple-600 text-white'
-                                            : 'text-gray-300 hover:bg-slate-800'
+                                        ? 'bg-purple-600 text-white'
+                                        : 'text-gray-300 hover:bg-slate-800'
                                         }`}
                                 >
                                     {item.label}
@@ -152,15 +152,18 @@ export default function Portfolio() {
                     <p className="text-2xl md:text-3xl text-gray-300 mb-6">Computer Science Student & iOS Developer</p>
                     <p className="text-xl text-gray-400 mb-8">Sylhet, Bangladesh</p>
 
-                    <div className="flex justify-center space-x-4">
-                        <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="p-3 rounded-full bg-slate-800 hover:bg-purple-600 transition-all duration-300 hover:scale-110">
-                            <Github size={24} />
+                    <div className="flex justify-center flex-wrap gap-4">
+                        <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 rounded-full bg-slate-800 hover:bg-purple-600 transition-all duration-300 hover:scale-105 border border-purple-500/20">
+                            <Github size={20} />
+                            <span className="font-medium">GitHub</span>
                         </a>
-                        <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="p-3 rounded-full bg-slate-800 hover:bg-purple-600 transition-all duration-300 hover:scale-110">
-                            <Linkedin size={24} />
+                        <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 rounded-full bg-slate-800 hover:bg-purple-600 transition-all duration-300 hover:scale-105 border border-purple-500/20">
+                            <Linkedin size={20} />
+                            <span className="font-medium">LinkedIn</span>
                         </a>
-                        <a href="mailto:prattoy@example.com" className="p-3 rounded-full bg-slate-800 hover:bg-purple-600 transition-all duration-300 hover:scale-110">
-                            <Mail size={24} />
+                        <a href="mailto:prattoy@example.com" className="flex items-center gap-2 px-6 py-3 rounded-full bg-slate-800 hover:bg-purple-600 transition-all duration-300 hover:scale-105 border border-purple-500/20">
+                            <Mail size={20} />
+                            <span className="font-medium">Email</span>
                         </a>
                     </div>
                 </div>
@@ -168,9 +171,9 @@ export default function Portfolio() {
 
             {/* About Section */}
             <section id="about" className="py-20 px-4">
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-6xl mx-auto">
+                    <h2 className="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">About Me</h2>
                     <div className="bg-slate-800/50 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
-                        <h2 className="text-4xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">About Me</h2>
                         <p className="text-lg text-gray-300 leading-relaxed">
                             I am a Computer Science and Engineering student at Sylhet Engineering College with a strong passion for competitive programming and application development. I specialize in iOS development using Swift and Objective-C and have a solid foundation in algorithms and data structures.
                         </p>
@@ -180,7 +183,7 @@ export default function Portfolio() {
 
             {/* Education Section */}
             <section id="education" className="py-20 px-4">
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-6xl mx-auto">
                     <h2 className="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Education</h2>
                     <div className="bg-slate-800/50 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
                         <h3 className="text-2xl font-bold text-white mb-2">Sylhet Engineering College</h3>
