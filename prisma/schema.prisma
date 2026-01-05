@@ -25,6 +25,7 @@ model User {
   profilePhoto     String?           // URL to profile photo
   careerGoal       String?           // Career focus/goal
   portfolioComplete Boolean @default(false)  // Gates dashboard access
+  isAdmin          Boolean @default(false)   // Admin panel access
   
   // Rating System
   rating         Int      @default(1000) // Restricted Codeforces style
