@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 export default function FinanceTracker() {
     const [expenses, setExpenses] = useState<any[]>([]);
     const [incomes, setIncomes] = useState<any[]>([]);
     const [budget, setBudget] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isReportView, setIsReportView] = useState(false);
 
     // Expense Form
     const [amount, setAmount] = useState('');
@@ -107,7 +106,7 @@ export default function FinanceTracker() {
     const remaining = budgetLimit - totalSpent;
     const percentage = budgetLimit > 0 ? Math.min((totalSpent / budgetLimit) * 100, 100) : 0;
 
-    const downloadPDF = async () => {
+    /* const downloadPDF = async () => {
         const doc = new jsPDF();
 
         try {
@@ -204,8 +203,7 @@ export default function FinanceTracker() {
             styles: { font: 'NotoSansBengali', fontStyle: 'normal' }
         });
 
-        doc.save("Finance_Report.pdf");
-    };
+    }; */
 
     // Category icons
     const categoryIcons: Record<string, string> = {
@@ -229,6 +227,117 @@ export default function FinanceTracker() {
         return acc;
     }, {});
 
+    if (isReportView) {
+        return (
+            <div className="bg-white min-h-screen text-black p-8 transition-colors">
+                <style jsx global>{`
+                    @media print {
+                        .no-print { display: none !important; }
+                        body { background: white !important; color: black !important; }
+                        aside, nav, header, footer { display: none !important; }
+                        /* Ensure full width */
+                        .max-w-4xl { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+                        /* Hide URL headers/footers in generic browsers if possible (user setting mainly) */
+                    }
+                `}</style>
+
+                <div className="max-w-4xl mx-auto space-y-8">
+                    {/* Report Header */}
+                    <div className="flex justify-between items-start border-b border-gray-300 pb-6">
+                        <div>
+                            <h1 className="text-3xl font-bold mb-2">Finance & Budget Report</h1>
+                            <p className="text-gray-600">Generated on: {new Date().toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex gap-4 no-print">
+                            <button
+                                onClick={() => window.print()}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm"
+                            >
+                                🖨️ Print / PDF
+                            </button>
+                            <button
+                                onClick={() => setIsReportView(false)}
+                                className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold shadow-sm"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Summary Section */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-gray-50 rounded-xl border border-gray-200">
+                        <div>
+                            <div className="text-sm text-gray-500">Total Income</div>
+                            <div className="text-2xl font-bold text-green-600">${totalIncome.toFixed(2)}</div>
+                        </div>
+                        <div>
+                            <div className="text-sm text-gray-500">Total Expenses</div>
+                            <div className="text-2xl font-bold text-red-600">${totalSpent.toFixed(2)}</div>
+                        </div>
+                        <div>
+                            <div className="text-sm text-gray-500">Net Balance</div>
+                            <div className="text-2xl font-bold">${balance.toFixed(2)}</div>
+                        </div>
+                        <div>
+                            <div className="text-sm text-gray-500">Budget Status</div>
+                            <div className="text-xl font-bold">{budgetLimit > 0 ? `${percentage.toFixed(0)}% Used` : 'N/A'}</div>
+                        </div>
+                    </div>
+
+                    {/* Income Table */}
+                    <div>
+                        <h2 className="text-xl font-bold mb-4 border-b pb-2">Income History</h2>
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-100 border-b border-gray-300">
+                                <tr>
+                                    <th className="p-3 font-semibold">Date</th>
+                                    <th className="p-3 font-semibold">Source</th>
+                                    <th className="p-3 font-semibold">Description</th>
+                                    <th className="p-3 font-semibold text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {incomes.map((item) => (
+                                    <tr key={item.id} className="border-b border-gray-200 break-inside-avoid">
+                                        <td className="p-3">{new Date(item.date).toLocaleDateString()}</td>
+                                        <td className="p-3">{item.source}</td>
+                                        <td className="p-3 text-gray-600">{item.description || '-'}</td>
+                                        <td className="p-3 text-right font-mono text-green-600 font-medium">+${item.amount.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Expense Table */}
+                    <div>
+                        <h2 className="text-xl font-bold mb-4 border-b pb-2">Expense History</h2>
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-100 border-b border-gray-300">
+                                <tr>
+                                    <th className="p-3 font-semibold">Date</th>
+                                    <th className="p-3 font-semibold">Category</th>
+                                    <th className="p-3 font-semibold">Description</th>
+                                    <th className="p-3 font-semibold text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {expenses.map((item) => (
+                                    <tr key={item.id} className="border-b border-gray-200 break-inside-avoid">
+                                        <td className="p-3">{new Date(item.date).toLocaleDateString()}</td>
+                                        <td className="p-3">{item.category}</td>
+                                        <td className="p-3 text-gray-600">{item.description || '-'}</td>
+                                        <td className="p-3 text-right font-mono text-red-600 font-medium">-${item.amount.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -241,7 +350,7 @@ export default function FinanceTracker() {
                     <p className="text-gray-500 dark:text-gray-400 text-lg">Track your income, expenses and manage your monthly budget</p>
                 </div>
                 <button
-                    onClick={downloadPDF}
+                    onClick={() => setIsReportView(true)}
                     className="px-6 py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl font-semibold hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors flex items-center gap-2 shadow-lg"
                 >
                     <span>📄</span> Download Report
