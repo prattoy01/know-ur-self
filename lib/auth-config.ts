@@ -4,7 +4,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from './prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
     adapter: PrismaAdapter(prisma),
@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
                     id: user.id,
                     email: user.email!,
                     name: user.name,
-                    image: user.image || user.profilePhoto,
+                    image: user.profilePhoto,
                 };
             },
         }),
@@ -57,7 +57,7 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async session({ session, token }) {
             if (token && session.user) {
-                session.user.id = token.sub!;
+                (session.user as any).id = token.sub!;
             }
             return session;
         },
@@ -67,42 +67,27 @@ export const authOptions: NextAuthOptions = {
             }
             return token;
         },
-        async signIn({ user, account, profile }) {
-            // For OAuth sign-ins
-            if (account?.provider !== 'credentials') {
+        async signIn({ user, account }) {
+            // For OAuth sign-ins, auto-complete portfolio for new/existing users
+            if (account?.provider !== 'credentials' && user.email) {
                 try {
                     const existingUser = await prisma.user.findUnique({
-                        where: { email: user.email! },
+                        where: { email: user.email },
                     });
 
-                    // If user exists but is signing in with OAuth for first time
                     if (existingUser && !existingUser.portfolioComplete) {
-                        // Auto-complete portfolio for OAuth users
+                        // Auto-complete portfolio for existing OAuth users
                         await prisma.user.update({
                             where: { id: existingUser.id },
                             data: {
                                 portfolioComplete: true,
-                                image: user.image,
-                            },
-                        });
-                    }
-
-                    // For new OAuth users
-                    if (!existingUser) {
-                        // Create user with portfolio completed
-                        await prisma.user.create({
-                            data: {
-                                email: user.email!,
-                                name: user.name || 'User',
-                                image: user.image,
-                                emailVerified: new Date(),
-                                portfolioComplete: true,
+                                profilePhoto: user.image || existingUser.profilePhoto,
                             },
                         });
                     }
                 } catch (error) {
                     console.error('Error in signIn callback:', error);
-                    return false;
+                    // Don't block sign-in on error
                 }
             }
             return true;
