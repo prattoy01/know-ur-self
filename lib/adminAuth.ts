@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import jwt from 'jsonwebtoken';
+import { jwtVerify } from 'jose';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-this-in-env';
+const key = new TextEncoder().encode(JWT_SECRET);
 
 export interface AdminUser {
     id: string;
@@ -12,13 +13,15 @@ export interface AdminUser {
 }
 
 export async function verifyAdmin(request: NextRequest): Promise<AdminUser | null> {
-    const token = request.cookies.get('token')?.value;
-    if (!token) return null;
+    const session = request.cookies.get('session')?.value;
+    if (!session) return null;
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+        const { payload } = await jwtVerify(session, key, { algorithms: ['HS256'] });
+        const userId = payload.userId as string;
+
         const user = await prisma.user.findUnique({
-            where: { id: decoded.userId },
+            where: { id: userId },
             select: { id: true, email: true, role: true, isAdmin: true, status: true }
         });
 
