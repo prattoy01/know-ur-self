@@ -13,10 +13,11 @@ model User {
   id             String   @id @default(uuid())
   email          String   @unique
   emailVerified  DateTime?
-  passwordHash   String
+  passwordHash   String?  // Now optional for OAuth users
   name           String?
   bio            String?
   skills         String? // CS, Math, React, etc. (stored as comma separated or JSON)
+  image          String?  // Profile image from OAuth
   
   // Portfolio Identity
   username         String?  @unique  // For /u/username URLs
@@ -71,7 +72,39 @@ model User {
   targetedByLogs   AdminLog[]  @relation("TargetLogs")
   passwordResets   PasswordResetRequest[]
   
+  // OAuth Relations
+  accounts       Account[]
+  sessions       Session[]
+  
   resumeUrl      String?  // URL to resume/CV file
+}
+
+// NextAuth Models
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
