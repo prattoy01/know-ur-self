@@ -107,8 +107,32 @@ export default function FinanceTracker() {
     const remaining = budgetLimit - totalSpent;
     const percentage = budgetLimit > 0 ? Math.min((totalSpent / budgetLimit) * 100, 100) : 0;
 
-    const downloadPDF = () => {
+    const downloadPDF = async () => {
         const doc = new jsPDF();
+
+        try {
+            // Load Noto Sans Bengali font for Bangla support
+            const fontUrl = 'https://raw.githubusercontent.com/google/fonts/main/ofl/notosansbengali/NotoSansBengali-Regular.ttf';
+            const response = await fetch(fontUrl);
+            const buffer = await response.arrayBuffer();
+
+            // Convert to base64
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const fontBase64 = window.btoa(binary);
+
+            // Add font to VFS and register it
+            doc.addFileToVFS('NotoSansBengali.ttf', fontBase64);
+            doc.addFont('NotoSansBengali.ttf', 'NotoSansBengali', 'normal');
+            doc.setFont('NotoSansBengali');
+        } catch (error) {
+            console.error('Failed to load Bangla font:', error);
+            // Fallback continues without the font
+        }
 
         // Title
         doc.setFontSize(20);
@@ -134,7 +158,8 @@ export default function FinanceTracker() {
             head: [['Metric', 'Value']],
             body: summaryData,
             theme: 'striped',
-            headStyles: { fillColor: [66, 133, 244] }
+            headStyles: { fillColor: [66, 133, 244] },
+            styles: { font: 'NotoSansBengali', fontStyle: 'normal' }
         });
 
         // Income Table
@@ -154,7 +179,8 @@ export default function FinanceTracker() {
             head: [['Date', 'Source', 'Description', 'Amount']],
             body: incomeRows,
             theme: 'striped',
-            headStyles: { fillColor: [34, 197, 94] }
+            headStyles: { fillColor: [34, 197, 94] },
+            styles: { font: 'NotoSansBengali', fontStyle: 'normal' }
         });
 
         // Expense Table
@@ -174,7 +200,8 @@ export default function FinanceTracker() {
             head: [['Date', 'Category', 'Description', 'Amount']],
             body: expenseRows,
             theme: 'striped',
-            headStyles: { fillColor: [239, 68, 68] }
+            headStyles: { fillColor: [239, 68, 68] },
+            styles: { font: 'NotoSansBengali', fontStyle: 'normal' }
         });
 
         doc.save("Finance_Report.pdf");
