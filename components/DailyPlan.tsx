@@ -209,17 +209,17 @@ export default function DailyPlan() {
                 </div>
 
                 <form onSubmit={handleAddTask} className="flex flex-col gap-4">
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
                         <input
-                            className="flex-1 px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-yellow-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500"
+                            className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-yellow-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500"
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            placeholder="e.g. Review Calculus, Buy Groceries..."
+                            placeholder="e.g. Review Calculus..."
                             required
                         />
                         <input
-                            className="w-24 px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-yellow-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500"
+                            className="w-full sm:w-24 px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-yellow-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-500"
                             type="number"
                             value={estimatedDuration}
                             onChange={(e) => setEstimatedDuration(e.target.value)}

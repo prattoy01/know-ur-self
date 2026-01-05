@@ -295,7 +295,7 @@ export default function ActivityTracker() {
             </div>
 
             {/* Statistics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
                 <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
                     <div className="text-sm opacity-90 mb-1">Total Time</div>
                     <div className="text-3xl font-bold">{totalHours}h {remainingStatsMinutes}m</div>

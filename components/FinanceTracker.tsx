@@ -359,7 +359,7 @@ export default function FinanceTracker() {
             </div>
 
             {/* Balance & Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {/* Current Balance */}
                 <div className={`rounded-2xl p-6 text-white shadow-lg ${balance >= 0 ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-orange-600'}`}>
                     <div className="text-sm opacity-90 mb-1">Current Balance</div>
