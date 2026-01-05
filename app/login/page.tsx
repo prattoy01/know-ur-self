@@ -29,8 +29,13 @@ export default function LoginPage() {
                 throw new Error(data.error || 'Login failed');
             }
 
-            // Redirect based on portfolio completion status
-            if (data.portfolioComplete === false) {
+            // Redirect based on callbackUrl or portfolio status
+            const params = new URLSearchParams(window.location.search);
+            const callbackUrl = params.get('callbackUrl');
+
+            if (callbackUrl) {
+                router.push(callbackUrl);
+            } else if (data.portfolioComplete === false) {
                 router.push('/onboarding');
             } else {
                 router.push('/dashboard');
