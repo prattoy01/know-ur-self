@@ -142,7 +142,7 @@ export async function GET() {
                 label: l.label || '',
                 isVisible: l.isVisible,
             })),
-            cpStats: user.cpStats.map(c => ({
+            cpStats: user.cpStats.map((c: any) => ({
                 id: c.id,
                 platform: c.platform,
                 handle: c.handle || '',

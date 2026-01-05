@@ -52,7 +52,7 @@ export async function GET(request: Request) {
         };
 
         // Parse JSON strings back to objects for finalized history
-        const parsedHistory = history.map(h => {
+        const parsedHistory = history.map((h: any) => {
             try {
                 return {
                     ...h,
