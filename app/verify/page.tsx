@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default function VerifyPage() {
+function VerifyContent() {
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
     const router = useRouter();
@@ -45,30 +45,48 @@ export default function VerifyPage() {
     }, [token, router]);
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-[#0f1115]">
-            <div className="w-full max-w-md bg-white dark:bg-[#161b22] rounded-2xl shadow-xl p-8 text-center space-y-6 animate-fade-in border border-gray-200 dark:border-gray-800">
-                <div className="text-6xl mb-4">
-                    {status === 'verifying' && '⏳'}
-                    {status === 'success' && '✅'}
-                    {status === 'error' && '❌'}
-                </div>
-
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-                    {status === 'verifying' && 'Verifying...'}
-                    {status === 'success' && 'Verified!'}
-                    {status === 'error' && 'Verification Failed'}
-                </h1>
-
-                <p className="text-gray-600 dark:text-gray-400">
-                    {msg}
-                </p>
-
-                {status === 'error' && (
-                    <Link href="/login" className="inline-block mt-4 text-blue-600 hover:underline">
-                        Back to Login
-                    </Link>
-                )}
+        <div className="w-full max-w-md bg-white dark:bg-[#161b22] rounded-2xl shadow-xl p-8 text-center space-y-6 animate-fade-in border border-gray-200 dark:border-gray-800">
+            <div className="text-6xl mb-4">
+                {status === 'verifying' && '⏳'}
+                {status === 'success' && '✅'}
+                {status === 'error' && '❌'}
             </div>
+
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+                {status === 'verifying' && 'Verifying...'}
+                {status === 'success' && 'Verified!'}
+                {status === 'error' && 'Verification Failed'}
+            </h1>
+
+            <p className="text-gray-600 dark:text-gray-400">
+                {msg}
+            </p>
+
+            {status === 'error' && (
+                <Link href="/login" className="inline-block mt-4 text-blue-600 hover:underline">
+                    Back to Login
+                </Link>
+            )}
+        </div>
+    );
+}
+
+function VerifyFallback() {
+    return (
+        <div className="w-full max-w-md bg-white dark:bg-[#161b22] rounded-2xl shadow-xl p-8 text-center space-y-6 animate-fade-in border border-gray-200 dark:border-gray-800">
+            <div className="text-6xl mb-4">⏳</div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Loading...</h1>
+            <p className="text-gray-600 dark:text-gray-400">Please wait...</p>
+        </div>
+    );
+}
+
+export default function VerifyPage() {
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-[#0f1115]">
+            <Suspense fallback={<VerifyFallback />}>
+                <VerifyContent />
+            </Suspense>
         </div>
     );
 }
