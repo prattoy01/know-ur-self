@@ -1,0 +1,218 @@
+import { prisma } from '@/lib/prisma';
+import { verifySession } from '@/lib/auth';
+import RatingGraph from '@/components/RatingGraph';
+import { calculateDPS, updateRating } from '@/lib/rating';
+import DashboardTaskPopup from '@/components/DashboardTaskPopup';
+
+async function getDashboardData(userId: string) {
+    // 1. Ensure rating is up to date (Process any missed days)
+    await updateRating(userId);
+
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+            name: true,
+            rating: true,
+            rank: true,
+            currentStreak: true,
+        }
+    });
+
+    // Calculate DPS for today (Live Projection)
+    let activeDPS = 0;
+    try {
+        const dps = await calculateDPS(userId);
+        activeDPS = dps.totalDPS;
+    } catch (e) {
+        console.error("Failed to calculate DPS", e);
+    }
+
+    const budget = await prisma.budget.findFirst({
+        where: { userId },
+    });
+
+    const expenses = await prisma.expense.findMany({
+        where: { userId },
+    });
+
+    const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+    const budgetAmount = budget?.amount || 0;
+    const remaining = budgetAmount - totalExpenses;
+
+    return {
+        user,
+        activeDPS,
+        budget: {
+            total: budgetAmount,
+            spent: totalExpenses,
+            remaining,
+            status: remaining < 0 ? 'Over Budget' : 'Remaining'
+        }
+    };
+}
+
+export default async function DashboardPage() {
+    const session = await verifySession();
+    if (!session) return null;
+
+    const data = await getDashboardData(session.userId);
+    const { user, budget, activeDPS } = data;
+
+    return (
+        <div className="space-y-8">
+            <DashboardTaskPopup />
+            {/* Header */}
+            <div>
+                <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+                    Welcome back, {user?.name || 'User'} 👋
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400 text-lg">Here's your productivity overview for today</p>
+            </div>
+
+            {/* Key Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <MetricCard
+                    title="Current Rating"
+                    value={user?.rating.toString() || '0'}
+                    subtitle={user?.rank || 'Newbie'}
+                    icon="⭐"
+                    gradient="from-yellow-400 to-orange-500"
+                    trend="+0"
+                />
+                <MetricCard
+                    title="Productivity Score"
+                    value={activeDPS.toString()}
+                    subtitle="Daily Score (DPS)"
+                    icon="📈"
+                    gradient="from-green-400 to-emerald-500"
+                    trend="/ 100"
+                />
+                <MetricCard
+                    title="Study Streak"
+                    value={(user?.currentStreak || 0).toString()}
+                    subtitle="Days Active"
+                    icon="🔥"
+                    gradient="from-red-400 to-pink-500"
+                    trend="+0"
+                />
+                <MetricCard
+                    title="Budget Status"
+                    value={`$${budget.remaining.toFixed(2)}`}
+                    subtitle={budget.status}
+                    icon="💰"
+                    gradient="from-blue-400 to-cyan-500"
+                    trend={`${budget.total > 0 ? Math.round((budget.spent / budget.total) * 100) : 0}% used`}
+                />
+            </div>
+
+            {/* Rating History Graph */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Rating Progress</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Your journey to the top</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                            <span className="text-gray-600 dark:text-gray-300">Rating</span>
+                        </div>
+                    </div>
+                </div>
+                <RatingGraph />
+            </div>
+
+            {/* Activity Overview */}
+            <div className="grid md:grid-cols-2 gap-6">
+                {/* Today's Activities */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
+                            ⏱️
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Today's Activities</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Track your time</p>
+                        </div>
+                    </div>
+                    <div className="text-center py-8">
+                        <div className="text-6xl mb-4">📊</div>
+                        <p className="text-gray-400 mb-4">No activities logged today</p>
+                        <a href="/dashboard/activities" className="inline-block px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300">
+                            Start Tracking
+                        </a>
+                    </div>
+                </div>
+
+                {/* Daily Plan */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-2xl">
+                            📅
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Daily Plan</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Your schedule</p>
+                        </div>
+                    </div>
+                    <div className="text-center py-8">
+                        <div className="text-6xl mb-4">📝</div>
+                        <p className="text-gray-400 mb-4">No tasks set for today</p>
+                        <a href="/dashboard/plan" className="inline-block px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300">
+                            Create Plan
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-xl p-8 text-white">
+                <h2 className="text-2xl font-bold mb-2">Quick Actions</h2>
+                <p className="text-blue-100 mb-6">Jump to your most used features</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <QuickActionButton href="/dashboard/activities" icon="⏱️" label="Track Time" />
+                    <QuickActionButton href="/dashboard/budget" icon="💰" label="Add Expense" />
+                    <QuickActionButton href="/dashboard/study" icon="📚" label="Study Session" />
+                    <QuickActionButton href="/dashboard/portfolio" icon="🌐" label="View Portfolio" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function MetricCard({ title, value, subtitle, icon, gradient, trend }: {
+    title: string;
+    value: string;
+    subtitle: string;
+    icon: string;
+    gradient: string;
+    trend: string;
+}) {
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between mb-4">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center text-2xl`}>
+                    {icon}
+                </div>
+                <div className="text-green-500 text-sm font-semibold">
+                    {trend}
+                </div>
+            </div>
+            <div className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-1">{value}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{subtitle}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500">{title}</div>
+        </div>
+    );
+}
+
+function QuickActionButton({ href, icon, label }: { href: string; icon: string; label: string }) {
+    return (
+        <a
+            href={href}
+            className="bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-xl p-4 text-center transition-all duration-300 hover:scale-105"
+        >
+            <div className="text-3xl mb-2">{icon}</div>
+            <div className="text-sm font-medium">{label}</div>
+        </a>
+    );
+}

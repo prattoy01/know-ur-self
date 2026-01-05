@@ -1,0 +1,349 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  emailVerified  DateTime?
+  passwordHash   String
+  name           String?
+  bio            String?
+  skills         String? // CS, Math, React, etc. (stored as comma separated or JSON)
+  
+  // Portfolio Identity
+  username         String?  @unique  // For /u/username URLs
+  headline         String?           // One-liner tagline
+  location         String?           // City, Country
+  profilePhoto     String?           // URL to profile photo
+  careerGoal       String?           // Career focus/goal
+  portfolioComplete Boolean @default(false)  // Gates dashboard access
+  
+  // Rating System
+  rating         Int      @default(1000) // Restricted Codeforces style
+  rank           String   @default("Newbie")
+  
+  // Advanced Rating Metrics
+  currentStreak   Int      @default(0)
+  lastActiveDate  DateTime @default(now())
+  lastDailySnapshot DateTime? // Tracks the last date we finalized a daily rating
+  dailyStudyGoal  Float    @default(2.0) // Default 2 hours goal
+  
+  // Relations
+  activities     Activity[]
+  expenses       Expense[]
+  budgets        Budget[]
+  tasks          Task[]
+  subjects       Subject[]
+  studySessions  StudySession[]
+  portfolio      PortfolioSettings?
+  
+  // Portfolio Relations
+  education       PortfolioEducation[]
+  portfolioSkills PortfolioSkill[]
+  projects        PortfolioProject[]
+  achievements    PortfolioAchievement[]
+  certifications  PortfolioCertification[]
+  contactLinks    PortfolioLink[]
+  cpStats         PortfolioCPStats[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  ratingHistory  RatingHistory[]
+  incomes        Income[]
+  
+  resumeUrl      String?  // URL to resume/CV file
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model RatingHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  date      DateTime // The date this record represents
+  
+  oldRating Int
+  newRating Int
+  change    Int
+  dps       Int      // Daily Performance Score
+  
+  reason    String?  // Short summary
+  breakdown String   // JSON String: { study: 30, plan: -10, etc. }
+  
+  createdAt DateTime @default(now())
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  type        String   // "STUDY", "CODE", "EXERCISE", "READING", "OTHER"
+  name        String?  // Optional specific name
+  duration    Int      // In minutes (Actual)
+  plannedDuration Int  @default(0) // In minutes (Planned/Timer setting)
+  notes       String?
+  date        DateTime @default(now()) // Can be overridden for past entry
+
+  createdAt   DateTime @default(now())
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  amount      Float
+  category    String   // "FOOD", "TRAVEL", "BOOKS", "ONLINE", "OTHER"
+  description String?
+  date        DateTime @default(now())
+
+  createdAt   DateTime @default(now())
+}
+
+model Budget {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  type        String   // "DAILY", "WEEKLY", "MONTHLY"
+  amount      Float
+  category    String?  // Optional: if null, applies to total
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Fix relation key
+  @@index([userId])
+}
+
+model Income {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  amount      Float
+  source      String   // "SALARY", "FREELANCE", "GIFT", "OTHER"
+  description String?
+  date        DateTime @default(now())
+
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+}
+
+// Correcting the Budget relation manually in next step if this fails, 
+// but I'll fix it in the string now.
+// user User @relation(fields: [userId], references: [id])
+
+model Task {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  title       String
+  isCompleted Boolean  @default(false)
+  priority    String   @default("MEDIUM") // "LOW", "MEDIUM", "HIGH"
+  difficulty  String   @default("MEDIUM") // "EASY", "MEDIUM", "HARD"
+  estimatedDuration Int @default(30)      // Minutes
+  notes       String?  // Optional notes for the task
+  
+  date        DateTime @default(now()) // Example: 2025-01-01 (ignoring time for daily plan)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+}
+
+model Subject {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  name        String
+  difficulty  Int      // 1-5 or 1-10
+  
+  studySessions StudySession[]
+
+  createdAt   DateTime @default(now())
+}
+
+model StudySession {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+
+  topics      String?  // "Arrays, DP, Calculus"
+  duration    Int      // Minutes
+  date        DateTime @default(now())
+
+  createdAt   DateTime @default(now())
+}
+
+model PortfolioSettings {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+
+  isPublic    Boolean  @default(true)
+  showStats   Boolean  @default(true)
+  showRating  Boolean  @default(true)
+  showAbout   Boolean  @default(true)
+  showEducation Boolean @default(true)
+  showSkills  Boolean  @default(true)
+  showProjects Boolean @default(true)
+  showAchievements Boolean @default(true)
+  showCertifications Boolean @default(true)
+  showContact Boolean  @default(true)
+  
+  customUrl   String?  @unique // Optional custom slug
+
+  updatedAt   DateTime @updatedAt
+}
+
+model PortfolioEducation {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  institution String
+  degree      String
+  field       String?    // Field of study
+  startYear   Int
+  endYear     Int?       // Null if ongoing
+  gpa         String?    // Optional GPA
+  description String?    // Additional details
+  isVisible   Boolean    @default(true)
+  order       Int        @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PortfolioSkill {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  level       String   // "BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"
+  category    String?  // "Languages", "Frameworks", "Tools", etc.
+  isVisible   Boolean  @default(true)
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PortfolioProject {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String?
+  technologies String?  // Comma-separated or JSON
+  liveUrl     String?
+  repoUrl     String?
+  imageUrl    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  isFeatured  Boolean  @default(false)
+  isVisible   Boolean  @default(true)
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PortfolioAchievement {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title       String
+  subtitle    String?
+  description String?
+  date        DateTime?
+  rank        String?    // e.g., "1st", "Top 10%"
+  organizer   String?    // Contest/Organization name
+  isVisible   Boolean    @default(true)
+  order       Int        @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PortfolioCertification {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  issuer      String
+  issueDate   DateTime?
+  expiryDate  DateTime?
+  credentialId String?
+  credentialUrl String?
+  isVisible   Boolean    @default(true)
+  order       Int        @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PortfolioLink {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        String   // "GITHUB", "LINKEDIN", "TWITTER", "WEBSITE", "CODEFORCES", "OTHER"
+  label       String?  // Display label
+  url         String
+  isVisible   Boolean  @default(true)
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Competitive Programming Platform Stats
+model PortfolioCPStats {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  platform    String   // "CODEFORCES", "CODECHEF", "ATCODER", "LEETCODE", "OTHER"
+  handle      String?  // Username on the platform
+  maxRating   Int?     // Maximum rating achieved
+  currentRating Int?   // Current rating
+  rank        String?  // Rank title (Specialist, 4*, etc.)
+  problemsSolved Int?  // Number of problems solved
+  contestsCount Int?   // Number of contests participated
+  profileUrl  String?  // Link to profile
+  isVisible   Boolean  @default(true)
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
