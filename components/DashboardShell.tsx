@@ -14,10 +14,12 @@ import { handleLogout } from '@/app/dashboard/actions';
 
 export default function DashboardShell({
     children,
-    userName
+    userName,
+    userPhoto
 }: {
     children: React.ReactNode;
     userName: string;
+    userPhoto?: string;
 }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -26,9 +28,13 @@ export default function DashboardShell({
             {/* Mobile Header */}
             <div className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-[#161b22] border-b border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between z-30">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm">
-                        ⚡
-                    </div>
+                    {userPhoto ? (
+                        <img src={userPhoto} alt={userName} className="w-8 h-8 rounded-lg object-cover" />
+                    ) : (
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                            {userName.charAt(0).toUpperCase()}
+                        </div>
+                    )}
                     <span className="font-bold text-gray-800 dark:text-gray-100">{userName}</span>
                 </div>
                 <button
@@ -57,9 +63,13 @@ export default function DashboardShell({
                 {/* Logo (Desktop) */}
                 <div className="hidden md:block p-6 border-b border-gray-200 dark:border-gray-800">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl">
-                            ⚡
-                        </div>
+                        {userPhoto ? (
+                            <img src={userPhoto} alt={userName} className="w-10 h-10 rounded-xl object-cover" />
+                        ) : (
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl font-bold">
+                                {userName.charAt(0).toUpperCase()}
+                            </div>
+                        )}
                         <div>
                             <div className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate max-w-[180px]" title={userName}>
                                 {userName}

@@ -15,14 +15,14 @@ export default async function DashboardLayout({
         redirect('/login');
     }
 
-    // Fetch user name
+    // Fetch user name and photo
     const user = await prisma.user.findUnique({
         where: { id: session.userId },
-        select: { name: true }
+        select: { name: true, profilePhoto: true }
     });
 
     return (
-        <DashboardShell userName={user?.name || 'AntiGravity'}>
+        <DashboardShell userName={user?.name || 'User'} userPhoto={user?.profilePhoto || undefined}>
             {children}
         </DashboardShell>
     );

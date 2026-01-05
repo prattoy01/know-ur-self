@@ -87,12 +87,12 @@ export default function ActivityTracker() {
     // Alarm Sound and Confetti
     const playAlarm = () => {
         try {
-            // Use Web Audio API for reliable 5-second alarm
+            // Use Web Audio API for reliable 2-beep alarm
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-            // Play beeps for 5 seconds (10 beeps, 0.5s apart)
-            for (let i = 0; i < 10; i++) {
-                const startTime = audioContext.currentTime + (i * 0.5);
+            // Play 2 short beeps
+            for (let i = 0; i < 2; i++) {
+                const startTime = audioContext.currentTime + (i * 0.3);
 
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
@@ -105,10 +105,10 @@ export default function ActivityTracker() {
                 oscillator.type = 'sine';
 
                 gainNode.gain.setValueAtTime(0.3, startTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2);
 
                 oscillator.start(startTime);
-                oscillator.stop(startTime + 0.3);
+                oscillator.stop(startTime + 0.2);
             }
         } catch (e) {
             console.error("Failed to play alarm", e);
