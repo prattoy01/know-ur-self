@@ -72,7 +72,7 @@ export async function DELETE(
     try {
         const user = await prisma.user.findUnique({
             where: { id },
-            select: { email: true, status: true, role: true }
+            select: { email: true, status: true, role: true, username: true }
         });
 
         if (!user) {
@@ -84,13 +84,24 @@ export async function DELETE(
             return NextResponse.json({ error: 'Cannot delete admin users' }, { status: 403 });
         }
 
-        // Soft delete
+        // Soft delete - rename email/username to free up unique constraints
+        const timestamp = Date.now();
+        const deletedEmail = `deleted_${timestamp}_${user.email}`;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const updateData: any = {
+            status: 'deleted',
+            deletedAt: new Date(),
+            email: deletedEmail
+        };
+
+        if (user.username) {
+            updateData.username = `deleted_${timestamp}_${user.username}`;
+        }
+
         await prisma.user.update({
             where: { id },
-            data: {
-                status: 'deleted',
-                deletedAt: new Date()
-            }
+            data: updateData
         });
 
         // Log action
