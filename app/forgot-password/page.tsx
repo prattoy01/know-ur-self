@@ -13,15 +13,18 @@ export default function ForgotPasswordPage() {
         setError('');
 
         try {
-            // TODO: Implement password reset API
-            // const res = await fetch('/api/auth/forgot-password', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({ email }),
-            // });
+            const res = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
 
-            // Placeholder: simulate success
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to submit request');
+            }
+
             setSubmitted(true);
         } catch (err: any) {
             setError(err.message);
