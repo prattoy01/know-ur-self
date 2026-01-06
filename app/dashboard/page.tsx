@@ -1,31 +1,21 @@
 import { prisma } from '@/lib/prisma';
 import { verifySession } from '@/lib/auth';
 import RatingGraph from '@/components/RatingGraph';
-import { calculateDPS, updateRating } from '@/lib/rating';
+import { RatingEngine } from '@/lib/rating-engine';
 import DashboardTaskPopup from '@/components/DashboardTaskPopup';
 
 async function getDashboardData(userId: string) {
-    // 1. Ensure rating is up to date (Process any missed days)
-    await updateRating(userId);
+    // Use RatingEngine for consistent rating data
+    await RatingEngine.checkAndFinalizePastDays(userId);
+    const ratingState = await RatingEngine.getState(userId);
 
     const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
             name: true,
-            rating: true,
-            rank: true,
             currentStreak: true,
         }
     });
-
-    // Calculate DPS for today (Live Projection)
-    let activeDPS = 0;
-    try {
-        const dps = await calculateDPS(userId);
-        activeDPS = dps.totalDPS;
-    } catch (e) {
-        console.error("Failed to calculate DPS", e);
-    }
 
     const budget = await prisma.budget.findFirst({
         where: { userId },
@@ -41,7 +31,7 @@ async function getDashboardData(userId: string) {
 
     return {
         user,
-        activeDPS,
+        ratingState,
         budget: {
             total: budgetAmount,
             spent: totalExpenses,
@@ -56,7 +46,7 @@ export default async function DashboardPage() {
     if (!session) return null;
 
     const data = await getDashboardData(session.userId);
-    const { user, budget, activeDPS } = data;
+    const { user, budget, ratingState } = data;
 
     return (
         <div className="space-y-8">
@@ -73,15 +63,15 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard
                     title="Current Rating"
-                    value={user?.rating.toString() || '0'}
-                    subtitle={user?.rank || 'Newbie'}
+                    value={ratingState.currentRating.toString()}
+                    subtitle={ratingState.tier}
                     icon="⭐"
                     gradient="from-yellow-400 to-orange-500"
-                    trend="+0"
+                    trend={ratingState.todayDelta >= 0 ? `+${ratingState.todayDelta}` : ratingState.todayDelta.toString()}
                 />
                 <MetricCard
                     title="Productivity Score"
-                    value={activeDPS.toString()}
+                    value={ratingState.todayDPS.totalDPS.toString()}
                     subtitle="Daily Score (DPS)"
                     icon="📈"
                     gradient="from-green-400 to-emerald-500"

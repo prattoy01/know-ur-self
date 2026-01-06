@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifySession } from '@/lib/auth';
-import { updateRating, recalculateCurrentRating } from '@/lib/rating';
+import { RatingEngine } from '@/lib/rating-engine';
 
 export async function GET(request: Request) {
     const session = await verifySession();
@@ -68,16 +68,16 @@ export async function POST(request: Request) {
             },
         });
 
-        // Trigger INSTANT Rating Update
-        let ratingUpdate = null;
+        // Trigger Rating Engine Update
+        let ratingState = null;
         try {
-            ratingUpdate = await recalculateCurrentRating(session.userId);
+            await RatingEngine.checkAndFinalizePastDays(session.userId);
+            ratingState = await RatingEngine.processEvent({ type: 'TASK_CREATE', userId: session.userId });
         } catch (ratingError) {
             console.error('Failed to update rating:', ratingError);
-            // Don't fail the request if rating update fails, just log it
         }
 
-        return NextResponse.json({ success: true, task, rating: ratingUpdate });
+        return NextResponse.json({ success: true, task, rating: ratingState });
     } catch (error: any) {
         console.error('Task Creation Error:', error);
         return NextResponse.json({
@@ -128,16 +128,17 @@ export async function PATCH(request: Request) {
                     where: { id, deletedAt: null },
                     data: { isCompleted },
                 });
-                // Trigger INSTANT Rating Update
-                let ratingUpdate = null;
+                // Trigger Rating Engine Update
+                let ratingState = null;
                 try {
-                    ratingUpdate = await recalculateCurrentRating(session.userId);
+                    const eventType = isCompleted ? 'TASK_COMPLETE' : 'TASK_UNCOMPLETE';
+                    ratingState = await RatingEngine.processEvent({ type: eventType, userId: session.userId });
                 } catch (e) {
                     console.error('Rating update failed:', e);
                 }
                 return NextResponse.json({
                     task: updatedTask,
-                    rating: ratingUpdate,
+                    rating: ratingState,
                     warning: '⚠️ Editing after 6 AM may affect your rating.'
                 });
             }
@@ -148,15 +149,15 @@ export async function PATCH(request: Request) {
             where: { id, deletedAt: null },
             data: { isCompleted },
         });
-        // Trigger INSTANT Rating Update
-        let ratingUpdate = null;
+        // Trigger Rating Engine Update
+        let ratingState = null;
         try {
-            const { recalculateCurrentRating } = await import('@/lib/rating');
-            ratingUpdate = await recalculateCurrentRating(session.userId);
+            const eventType = isCompleted ? 'TASK_COMPLETE' : 'TASK_UNCOMPLETE';
+            ratingState = await RatingEngine.processEvent({ type: eventType, userId: session.userId });
         } catch (e) {
             console.error('Rating update failed:', e);
         }
-        return NextResponse.json({ task: updatedTask, rating: ratingUpdate });
+        return NextResponse.json({ task: updatedTask, rating: ratingState });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
     }
@@ -212,18 +213,18 @@ export async function DELETE(request: Request) {
                     data: { deletedAt: new Date() }
                 });
 
-                // Trigger INSTANT Rating Update
-                let ratingUpdate = null;
+                // Trigger Rating Engine Update
+                let ratingState = null;
                 try {
-                    ratingUpdate = await recalculateCurrentRating(session.userId);
+                    ratingState = await RatingEngine.processEvent({ type: 'TASK_DELETE', userId: session.userId });
                 } catch (e) {
                     console.error('Rating update failed:', e);
                 }
 
                 return NextResponse.json({
                     success: true,
-                    rating: ratingUpdate,
-                    warning: '⚠️ Deletion penalty applied: -5 rating points.'
+                    rating: ratingState,
+                    warning: '⚠️ Deletion penalty applied.'
                 });
             }
         }
@@ -234,16 +235,15 @@ export async function DELETE(request: Request) {
             data: { deletedAt: new Date() }
         });
 
-        // Trigger INSTANT Rating Update
-        let ratingUpdate = null;
+        // Trigger Rating Engine Update
+        let ratingState = null;
         try {
-            const { recalculateCurrentRating } = await import('@/lib/rating');
-            ratingUpdate = await recalculateCurrentRating(session.userId);
+            ratingState = await RatingEngine.processEvent({ type: 'TASK_DELETE', userId: session.userId });
         } catch (e) {
             console.error('Rating update failed:', e);
         }
 
-        return NextResponse.json({ success: true, rating: ratingUpdate });
+        return NextResponse.json({ success: true, rating: ratingState });
     } catch (error) {
         console.error(error);
         return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });

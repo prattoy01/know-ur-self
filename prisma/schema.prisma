@@ -121,6 +121,7 @@ model RatingHistory {
   user      User     @relation(fields: [userId], references: [id])
   
   date      DateTime // The date this record represents
+  status    String   @default("LIVE") // "LIVE" | "LOCKED"
   
   oldRating Int
   newRating Int
@@ -131,6 +132,7 @@ model RatingHistory {
   breakdown String   // JSON String: { study: 30, plan: -10, etc. }
   
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Activity {

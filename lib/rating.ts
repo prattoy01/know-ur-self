@@ -233,7 +233,7 @@ export async function calculateStrictDPS(userId: string, date: Date = new Date()
     // Theoretical Min: -25 - 30 - 20 - 30 - 50 = -155
     // Clamp to -100, +100
     let rawDPS = planScore + studyScore + activityScore + budgetScore + disciplinePenalty;
-    rawDPS = Math.max(-100, Math.min(100, rawDPS));
+    rawDPS = Math.max(-200, Math.min(200, rawDPS));
 
     // 6. Relative Adjustment (vs 7-day average)
     // Fetch last 7 history entries

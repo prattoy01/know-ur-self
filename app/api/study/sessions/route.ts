@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifySession } from '@/lib/auth';
-import { updateRating } from '@/lib/rating';
+import { RatingEngine } from '@/lib/rating-engine';
 
 export async function GET(request: Request) {
     const session = await verifySession();
@@ -36,11 +36,18 @@ export async function POST(request: Request) {
             },
         });
 
-        // Trigger Rating Update
-        await updateRating(session.userId);
+        // Trigger Rating Engine Update
+        let ratingState = null;
+        try {
+            await RatingEngine.checkAndFinalizePastDays(session.userId);
+            ratingState = await RatingEngine.processEvent({ type: 'STUDY_LOGGED', userId: session.userId });
+        } catch (e) {
+            console.error('Rating update failed:', e);
+        }
 
-        return NextResponse.json({ success: true, studySession });
+        return NextResponse.json({ success: true, studySession, rating: ratingState });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to log study session' }, { status: 500 });
     }
 }
+

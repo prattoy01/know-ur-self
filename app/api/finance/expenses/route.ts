@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifySession } from '@/lib/auth';
+import { RatingEngine } from '@/lib/rating-engine';
 
 export async function GET(request: Request) {
     const session = await verifySession();
@@ -38,8 +39,18 @@ export async function POST(request: Request) {
             },
         });
 
-        return NextResponse.json({ success: true, expense });
+        // Trigger Rating Engine Update (expenses affect budget score)
+        let ratingState = null;
+        try {
+            await RatingEngine.checkAndFinalizePastDays(session.userId);
+            ratingState = await RatingEngine.processEvent({ type: 'EXPENSE_LOGGED', userId: session.userId });
+        } catch (e) {
+            console.error('Rating update failed:', e);
+        }
+
+        return NextResponse.json({ success: true, expense, rating: ratingState });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to log expense' }, { status: 500 });
     }
 }
+

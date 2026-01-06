@@ -1,6 +1,8 @@
 import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from './auth-config';
 
 const SECRET_KEY = process.env.JWT_SECRET || 'super-secret-key-change-this-in-env';
 const key = new TextEncoder().encode(SECRET_KEY);
@@ -33,6 +35,21 @@ export async function createSession(userId: string) {
 }
 
 export async function verifySession() {
+    // First, check for NextAuth session (OAuth users)
+    try {
+        const nextAuthSession = await getServerSession(authOptions);
+        if (nextAuthSession?.user) {
+            // NextAuth session exists - return userId from session
+            const userId = (nextAuthSession.user as any).id;
+            if (userId) {
+                return { userId };
+            }
+        }
+    } catch (error) {
+        // NextAuth session check failed, continue to custom JWT check
+    }
+
+    // Fall back to custom JWT session (credentials login)
     const cookieStore = await cookies();
     const session = cookieStore.get('session')?.value;
 

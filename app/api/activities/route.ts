@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifySession } from '@/lib/auth';
-import { updateRating } from '@/lib/rating';
+import { RatingEngine } from '@/lib/rating-engine';
 
 export async function GET(request: Request) {
     const session = await verifySession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Optional: Filter by date
-    // For now, fetch all or restrict to last 30 days
     try {
         const activities = await prisma.activity.findMany({
             where: { userId: session.userId },
@@ -44,12 +42,19 @@ export async function POST(request: Request) {
             },
         });
 
-        // Trigger Rating Update
-        await updateRating(session.userId);
+        // Trigger Rating Engine Update
+        let ratingState = null;
+        try {
+            await RatingEngine.checkAndFinalizePastDays(session.userId);
+            ratingState = await RatingEngine.processEvent({ type: 'ACTIVITY_LOGGED', userId: session.userId });
+        } catch (e) {
+            console.error('Rating update failed:', e);
+        }
 
-        return NextResponse.json({ success: true, activity });
+        return NextResponse.json({ success: true, activity, rating: ratingState });
     } catch (error) {
         console.error(error);
         return NextResponse.json({ error: 'Failed to log activity' }, { status: 500 });
     }
 }
+

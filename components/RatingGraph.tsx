@@ -19,6 +19,7 @@ interface RatingEntry {
     rank: string;
     contestName?: string;
     change?: number;
+    isLive?: boolean;
 }
 
 export default function RatingGraph() {
@@ -30,11 +31,12 @@ export default function RatingGraph() {
             .then(res => res.json())
             .then(data => {
                 if (data.history) {
-                    // Format dates
+                    // Format dates and handle isLive flag
                     const formatted = data.history.map((item: any) => ({
                         ...item,
                         date: new Date(item.date).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
-                        fullDate: new Date(item.date).toLocaleDateString()
+                        fullDate: new Date(item.date).toLocaleDateString(),
+                        isLive: item.isLive || false
                     }));
                     setData(formatted);
                 }
@@ -134,10 +136,18 @@ export default function RatingGraph() {
                             color: 'var(--tooltip-text, #1f2937)'
                         }}
                         itemStyle={{ color: '#ffd700' }}
-                        formatter={(value: any) => [value, 'Rating']}
+                        formatter={(value: any, name: any, props: any) => {
+                            const isLive = props?.payload?.isLive;
+                            return [value, isLive ? 'Rating (LIVE)' : 'Rating'];
+                        }}
                         labelFormatter={(label, payload) => {
                             if (payload && payload.length > 0) {
-                                return payload[0].payload.fullDate + (payload[0].payload.contestName ? ` - ${payload[0].payload.contestName}` : '');
+                                const isLive = payload[0].payload.isLive;
+                                const dateStr = payload[0].payload.fullDate;
+                                const contestName = payload[0].payload.contestName;
+                                return isLive
+                                    ? `${dateStr} 🟢 Today (Live)`
+                                    : dateStr + (contestName ? ` - ${contestName}` : '');
                             }
                             return label;
                         }}
@@ -148,7 +158,36 @@ export default function RatingGraph() {
                         dataKey="rating"
                         stroke="#fbbf24" // amber-400
                         strokeWidth={2}
-                        dot={{ fill: '#fbbf24', r: 3, stroke: '#fff', strokeWidth: 1 }}
+                        dot={(props: any) => {
+                            const { cx, cy, payload } = props;
+                            if (payload?.isLive) {
+                                // Pulsing green dot for LIVE entry
+                                return (
+                                    <circle
+                                        key={payload.id}
+                                        cx={cx}
+                                        cy={cy}
+                                        r={5}
+                                        fill="#10b981"
+                                        stroke="#10b981"
+                                        strokeWidth={2}
+                                        className="animate-pulse"
+                                    />
+                                );
+                            }
+                            // Standard amber dot for finalized entries
+                            return (
+                                <circle
+                                    key={payload?.id || `dot-${cx}-${cy}`}
+                                    cx={cx}
+                                    cy={cy}
+                                    r={3}
+                                    fill="#fbbf24"
+                                    stroke="#fff"
+                                    strokeWidth={1}
+                                />
+                            );
+                        }}
                         activeDot={{ r: 6 }}
                     />
                 </LineChart>
