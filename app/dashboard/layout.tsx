@@ -18,11 +18,15 @@ export default async function DashboardLayout({
     // Fetch user name and photo
     const user = await prisma.user.findUnique({
         where: { id: session.userId },
-        select: { name: true, profilePhoto: true }
+        select: { name: true, profilePhoto: true, email: true }
     });
 
     return (
-        <DashboardShell userName={user?.name || 'User'} userPhoto={user?.profilePhoto || undefined}>
+        <DashboardShell
+            userName={user?.name || 'User'}
+            userPhoto={user?.profilePhoto || undefined}
+            userEmail={user?.email || undefined}
+        >
             {children}
         </DashboardShell>
     );

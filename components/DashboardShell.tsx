@@ -10,11 +10,13 @@ import { RatingProvider } from '@/contexts/RatingContext';
 export default function DashboardShell({
     children,
     userName,
-    userPhoto
+    userPhoto,
+    userEmail
 }: {
     children: React.ReactNode;
     userName: string;
     userPhoto?: string;
+    userEmail?: string;
 }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -84,7 +86,9 @@ export default function DashboardShell({
                                 <div className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate max-w-[180px]" title={userName}>
                                     {userName}
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Productivity Platform</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px]" title={userEmail}>
+                                    {userEmail || 'Productivity Platform'}
+                                </div>
                             </div>
                         </div>
                     </div>
