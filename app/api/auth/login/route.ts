@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyPassword, createSession } from '@/lib/auth';
+import { verifyPassword, createSession, logout } from '@/lib/auth';
 
 export async function POST(request: Request) {
     try {
@@ -28,6 +28,10 @@ export async function POST(request: Request) {
         if (!user.emailVerified) {
             return NextResponse.json({ error: 'Please verify your email before logging in.' }, { status: 403 });
         }
+
+        // Clear any existing sessions before creating new one
+        // This ensures switching accounts works properly
+        await logout();
 
         await createSession(user.id);
 
