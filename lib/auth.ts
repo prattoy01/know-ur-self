@@ -35,34 +35,36 @@ export async function createSession(userId: string) {
 }
 
 export async function verifySession() {
-    // First, check for NextAuth session (OAuth users)
+    // 1. Check for custom JWT session (Credentials login) - Prioritize this!
+    // This ensures that if a user switches from OAuth to Credentials, the new session takes precedence
+    const cookieStore = await cookies();
+    const session = cookieStore.get('session')?.value;
+
+    if (session) {
+        try {
+            const { payload } = await jwtVerify(session, key, {
+                algorithms: ['HS256'],
+            });
+            return payload as { userId: string };
+        } catch (error) {
+            // Invalid custom session, fall through to NextAuth check
+        }
+    }
+
+    // 2. Fallback to NextAuth session (OAuth users)
     try {
         const nextAuthSession = await getServerSession(authOptions);
         if (nextAuthSession?.user) {
-            // NextAuth session exists - return userId from session
             const userId = (nextAuthSession.user as any).id;
             if (userId) {
                 return { userId };
             }
         }
     } catch (error) {
-        // NextAuth session check failed, continue to custom JWT check
+        // NextAuth session check failed
     }
 
-    // Fall back to custom JWT session (credentials login)
-    const cookieStore = await cookies();
-    const session = cookieStore.get('session')?.value;
-
-    if (!session) return null;
-
-    try {
-        const { payload } = await jwtVerify(session, key, {
-            algorithms: ['HS256'],
-        });
-        return payload as { userId: string };
-    } catch (error) {
-        return null;
-    }
+    return null;
 }
 
 export async function logout() {
