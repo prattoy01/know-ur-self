@@ -70,15 +70,19 @@ export async function verifySession() {
 export async function logout() {
     const cookieStore = await cookies();
 
-    // Clear custom JWT session
-    cookieStore.delete('session');
+    // Aggressive cleanup: Delete ANY cookie that looks like auth
+    const allCookies = cookieStore.getAll();
 
-    // Clear NextAuth session cookies
-    // NextAuth uses these cookie names for JWT strategy
-    cookieStore.delete('next-auth.session-token');
-    cookieStore.delete('__Secure-next-auth.session-token');
-    cookieStore.delete('next-auth.csrf-token');
-    cookieStore.delete('__Secure-next-auth.csrf-token');
-    cookieStore.delete('next-auth.callback-url');
-    cookieStore.delete('__Host-next-auth.csrf-token');
+    for (const cookie of allCookies) {
+        if (
+            cookie.name.includes('session') ||
+            cookie.name.includes('next-auth') ||
+            cookie.name.includes('csrf') ||
+            cookie.name.includes('callback')
+        ) {
+            cookieStore.delete(cookie.name);
+            // Also try deleting with secure options just in case
+            cookieStore.set(cookie.name, '', { maxAge: 0, path: '/' });
+        }
+    }
 }
