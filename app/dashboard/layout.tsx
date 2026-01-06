@@ -21,6 +21,8 @@ export default async function DashboardLayout({
         select: { name: true, profilePhoto: true, email: true }
     });
 
+    console.log('Dashboard Layout User Fetch:', { userId: session.userId, user });
+
     return (
         <DashboardShell
             userName={user?.name || 'User'}

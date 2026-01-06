@@ -87,7 +87,7 @@ export default function DashboardShell({
                                     {userName}
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px]" title={userEmail}>
-                                    {userEmail || 'Productivity Platform'}
+                                    {userEmail || 'EMAIL_MISSING'}
                                 </div>
                             </div>
                         </div>
