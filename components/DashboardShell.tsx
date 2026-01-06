@@ -3,15 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import ThemeToggle from '@/components/ThemeToggle';
-import { logout } from '@/lib/auth';
 import { RatingProvider } from '@/contexts/RatingContext';
-
-// We need a way to logout from client.
-// Actually layout.tsx used a server action `handleLogout`. We should pass it or move it.
-// To keep it simple, we can keep the form action if we import it, OR modify how logout works.
-// The original layout imported `handleLogout` from `./actions`.
-import { handleLogout } from '@/app/dashboard/actions';
 
 export default function DashboardShell({
     children,
@@ -23,6 +17,20 @@ export default function DashboardShell({
     userPhoto?: string;
 }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    const performLogout = async () => {
+        try {
+            // 1. Clear custom session cookie via API
+            await fetch('/api/auth/logout', { method: 'POST' });
+
+            // 2. Clear NextAuth session (client-side) and redirect
+            await signOut({ callbackUrl: '/login' });
+        } catch (error) {
+            console.error('Logout failed:', error);
+            // Fallback redirect if something fails
+            window.location.href = '/login';
+        }
+    };
 
     return (
         <RatingProvider pollingInterval={5000}>
@@ -106,15 +114,13 @@ export default function DashboardShell({
                             <span className="text-sm text-gray-600 dark:text-gray-400">Dark Mode</span>
                             <ThemeToggle />
                         </div>
-                        <form action={handleLogout}>
-                            <button
-                                type="submit"
-                                className="w-full px-4 py-3 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition-colors duration-200 font-medium flex items-center gap-2"
-                            >
-                                <span>🚪</span>
-                                <span>Logout</span>
-                            </button>
-                        </form>
+                        <button
+                            onClick={performLogout}
+                            className="w-full px-4 py-3 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition-colors duration-200 font-medium flex items-center gap-2"
+                        >
+                            <span>🚪</span>
+                            <span>Logout</span>
+                        </button>
                     </div>
                 </aside>
 
