@@ -67,5 +67,16 @@ export async function verifySession() {
 
 export async function logout() {
     const cookieStore = await cookies();
+
+    // Clear custom JWT session
     cookieStore.delete('session');
+
+    // Clear NextAuth session cookies
+    // NextAuth uses these cookie names for JWT strategy
+    cookieStore.delete('next-auth.session-token');
+    cookieStore.delete('__Secure-next-auth.session-token');
+    cookieStore.delete('next-auth.csrf-token');
+    cookieStore.delete('__Secure-next-auth.csrf-token');
+    cookieStore.delete('next-auth.callback-url');
+    cookieStore.delete('__Host-next-auth.csrf-token');
 }
