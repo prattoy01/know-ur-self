@@ -132,7 +132,7 @@ model RatingHistory {
   breakdown String   // JSON String: { study: 30, plan: -10, etc. }
   
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Activity {
