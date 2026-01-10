@@ -492,7 +492,17 @@ export class RatingEngine {
 
                 await prisma.user.update({
                     where: { id: userId },
-                    data: { rating: newRating }
+                    data: {
+                        rating: newRating,
+                        lastActiveDate: today // Update lastActiveDate to prevent loop
+                    }
+                });
+            } else {
+                // Even if no decay (just 1 day gap), we must bring lastActiveDate to today
+                // so we don't keep checking.
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: { lastActiveDate: today }
                 });
             }
         }
