@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
+import { Maximize, Minimize, RotateCcw, Play, Pause } from 'lucide-react';
 
 type Activity = {
     id: string;
@@ -26,6 +27,10 @@ export default function ActivityTracker() {
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [targetTime, setTargetTime] = useState<Date | null>(null);
     const [remainingSeconds, setRemainingSeconds] = useState(0);
+
+    // UI State
+    const [isFullScreen, setIsFullScreen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const fetchActivities = async () => {
         try {
@@ -244,6 +249,12 @@ export default function ActivityTracker() {
                 setTargetTime(null);
                 setRemainingSeconds(0);
                 setAlarmPlayed(false);
+
+                // Exit fullscreen if active
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+
             } else {
                 const error = await res.json();
                 console.error('Failed to log activity:', error);
@@ -255,14 +266,39 @@ export default function ActivityTracker() {
         }
     };
 
-    // Activity type configuration
-    const activityConfig: Record<string, { icon: string; gradient: string; color: string }> = {
-        'STUDY': { icon: '📚', gradient: 'from-blue-500 to-indigo-600', color: 'text-blue-600' },
-        'CODE': { icon: '💻', gradient: 'from-purple-500 to-pink-600', color: 'text-purple-600' },
-        'EXERCISE': { icon: '💪', gradient: 'from-green-500 to-emerald-600', color: 'text-green-600' },
-        'READING': { icon: '📖', gradient: 'from-orange-500 to-red-600', color: 'text-orange-600' },
-        'OTHER': { icon: '⭐', gradient: 'from-gray-500 to-slate-600', color: 'text-gray-600' }
+    // Fullscreen Logic
+    const toggleFullScreen = () => {
+        if (!document.fullscreenElement) {
+            containerRef.current?.requestFullscreen().then(() => {
+                setIsFullScreen(true);
+            }).catch((err) => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+            });
+        } else {
+            document.exitFullscreen();
+            setIsFullScreen(false);
+        }
     };
+
+    useEffect(() => {
+        const handleFullScreenChange = () => {
+            setIsFullScreen(!!document.fullscreenElement);
+        };
+        document.addEventListener("fullscreenchange", handleFullScreenChange);
+        return () => document.removeEventListener("fullscreenchange", handleFullScreenChange);
+    }, []);
+
+
+    // Activity type configuration
+    const activityConfig: Record<string, { icon: string; gradient: string; color: string; themeColor: string }> = {
+        'STUDY': { icon: '📚', gradient: 'from-blue-500 to-indigo-600', color: 'text-blue-600', themeColor: 'blue' },
+        'CODE': { icon: '💻', gradient: 'from-purple-500 to-pink-600', color: 'text-purple-600', themeColor: 'purple' },
+        'EXERCISE': { icon: '💪', gradient: 'from-green-500 to-emerald-600', color: 'text-green-600', themeColor: 'emerald' },
+        'READING': { icon: '📖', gradient: 'from-orange-500 to-red-600', color: 'text-orange-600', themeColor: 'orange' },
+        'OTHER': { icon: '⭐', gradient: 'from-gray-500 to-slate-600', color: 'text-gray-600', themeColor: 'slate' }
+    };
+
+    const currentTheme = activityConfig[type] || activityConfig['OTHER'];
 
     // Calculate statistics
     const totalMinutes = activities.reduce((acc, act) => acc + act.duration, 0);
@@ -282,6 +318,13 @@ export default function ActivityTracker() {
     const minutes = Math.floor((remainingSeconds % 3600) / 60);
     const seconds = remainingSeconds % 60;
     const formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+    // Circle Progress Calculation
+    const totalSeconds = (parseInt(plannedDuration) || 60) * 60;
+    const progress = remainingSeconds / totalSeconds;
+    const radius = 120;
+    const circumference = 2 * Math.PI * radius;
+    const dashoffset = circumference - progress * circumference;
 
     return (
         <div className="space-y-8">
@@ -311,37 +354,84 @@ export default function ActivityTracker() {
             </div>
 
             {/* Timer Card */}
-            <div className="bg-white dark:bg-[#161b22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-2xl">
-                        ⏱️
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Countdown Timer</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Timer stops automatically at zero</p>
-                    </div>
-                </div>
-
-                {/* Timer Display */}
-                {(isTimerRunning || remainingSeconds > 0 || targetTime) && (
-                    <div className="mb-6 text-center">
-                        <div className={`text-6xl font-mono font-bold mb-2 ${remainingSeconds === 0 ? 'text-green-500 dark:text-green-400 animate-pulse' : 'text-gray-800 dark:text-gray-100'}`}>
-                            {formattedTime}
+            <div
+                ref={containerRef}
+                className={`bg-white dark:bg-[#161b22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 flex flex-col justify-center items-center transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-50 rounded-none w-full h-full border-0' : ''}`}
+            >
+                {!isFullScreen && (
+                    <div className="flex items-center gap-3 mb-6 w-full">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-2xl">
+                            ⏱️
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {remainingSeconds === 0 ? '✨ Session Complete!' : `Planned: ${plannedDuration}m remaining`}
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Countdown Timer</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Timer stops automatically at zero</p>
                         </div>
                     </div>
                 )}
 
-                <div className="space-y-4">
+                {/* Circular Timer Display */}
+                {(isTimerRunning || remainingSeconds > 0 || targetTime) && (
+                    <div className="relative mb-8 group">
+                        {/* SVG Circle */}
+                        <svg className="w-80 h-80 transform -rotate-90">
+                            <circle
+                                cx="160"
+                                cy="160"
+                                r={radius}
+                                stroke="currentColor"
+                                strokeWidth="8"
+                                fill="transparent"
+                                className="text-slate-100 dark:text-slate-800"
+                            />
+                            <circle
+                                cx="160"
+                                cy="160"
+                                r={radius}
+                                stroke="currentColor"
+                                strokeWidth="8"
+                                fill="transparent"
+                                strokeDasharray={circumference}
+                                strokeDashoffset={dashoffset}
+                                strokeLinecap="round"
+                                className={`${currentTheme.color} transition-all duration-1000 ease-linear`}
+                            />
+                        </svg>
+
+                        <div className="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center">
+                            <span className={`text-sm uppercase tracking-widest mb-4 font-medium ${isFullScreen ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {remainingSeconds === 0 ? 'Complete' : 'Remaining'}
+                            </span>
+                            <h1 className={`text-6xl font-bold font-mono tracking-tighter ${isFullScreen ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                                {formattedTime}
+                            </h1>
+                        </div>
+
+                        {/* Fullscreen Toggle (Visible on hover or when fullscreen) */}
+                        <button
+                            onClick={toggleFullScreen}
+                            className={`absolute bottom-0 right-0 p-3 rounded-full transition-colors ${isFullScreen
+                                    ? 'text-white/70 hover:bg-white/10'
+                                    : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                }`}
+                            aria-label="Toggle Fullscreen"
+                        >
+                            {isFullScreen ? <Minimize size={24} /> : <Maximize size={24} />}
+                        </button>
+                    </div>
+                )}
+
+                <div className={`space-y-4 w-full max-w-md ${isFullScreen ? 'bg-white/5 p-6 rounded-2xl backdrop-blur-sm' : ''}`}>
                     {/* Activity Type */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className={`block text-sm font-medium mb-2 ${isFullScreen ? 'text-gray-300' : 'text-gray-700 dark:text-gray-300'}`}>
                             Activity Type
                         </label>
                         <select
-                            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                            className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${isFullScreen
+                                    ? 'bg-black/20 border-white/10 text-white focus:border-white/30'
+                                    : 'bg-white dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-orange-500'
+                                }`}
                             value={type}
                             onChange={(e) => setType(e.target.value)}
                             disabled={isTimerRunning || !!targetTime}
@@ -356,11 +446,14 @@ export default function ActivityTracker() {
 
                     {/* Planned Duration */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className={`block text-sm font-medium mb-2 ${isFullScreen ? 'text-gray-300' : 'text-gray-700 dark:text-gray-300'}`}>
                             Planned Duration (minutes)
                         </label>
                         <input
-                            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                            className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${isFullScreen
+                                    ? 'bg-black/20 border-white/10 text-white focus:border-white/30'
+                                    : 'bg-white dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-orange-500'
+                                }`}
                             type="number"
                             min="1"
                             value={plannedDuration}
@@ -372,11 +465,14 @@ export default function ActivityTracker() {
 
                     {/* Name */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className={`block text-sm font-medium mb-2 ${isFullScreen ? 'text-gray-300' : 'text-gray-700 dark:text-gray-300'}`}>
                             Activity Name (Optional)
                         </label>
                         <input
-                            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                            className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all ${isFullScreen
+                                    ? 'bg-black/20 border-white/10 text-white focus:border-white/30'
+                                    : 'bg-white dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-orange-500'
+                                }`}
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
@@ -387,11 +483,14 @@ export default function ActivityTracker() {
 
                     {/* Notes */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className={`block text-sm font-medium mb-2 ${isFullScreen ? 'text-gray-300' : 'text-gray-700 dark:text-gray-300'}`}>
                             Notes (Optional)
                         </label>
                         <textarea
-                            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100 resize-none"
+                            className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none resize-none transition-all ${isFullScreen
+                                    ? 'bg-black/20 border-white/10 text-white focus:border-white/30'
+                                    : 'bg-white dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-orange-500'
+                                }`}
                             rows={3}
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
@@ -405,16 +504,24 @@ export default function ActivityTracker() {
                         {!targetTime ? (
                             <button
                                 onClick={handleStartTimer}
-                                className="flex-1 px-6 py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-green-500/40 transition-all duration-300 text-lg"
+                                className="flex-1 px-6 py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-green-500/40 transition-all duration-300 text-lg flex items-center justify-center gap-2"
                             >
-                                ▶️ Start Countdown
+                                <Play size={20} fill="currentColor" /> Start Countdown
                             </button>
                         ) : (
                             <button
                                 onClick={handleStopTimer}
-                                className={`flex-1 px-6 py-4 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-lg ${remainingSeconds === 0 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:shadow-blue-500/40' : 'bg-gradient-to-r from-red-400 to-orange-500 hover:shadow-red-500/40'}`}
+                                className={`flex-1 px-6 py-4 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-lg flex items-center justify-center gap-2 ${remainingSeconds === 0 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:shadow-blue-500/40' : 'bg-gradient-to-r from-red-400 to-orange-500 hover:shadow-red-500/40'}`}
                             >
-                                {remainingSeconds === 0 ? '✅ Log Completed Activity' : '⏹️ Stop & Log Activity'}
+                                {remainingSeconds === 0 ? (
+                                    <>
+                                        ✅ Log Completed Activity
+                                    </>
+                                ) : (
+                                    <>
+                                        <Pause size={20} fill="currentColor" /> Stop & Log
+                                    </>
+                                )}
                             </button>
                         )}
                     </div>
