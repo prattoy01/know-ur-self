@@ -343,7 +343,7 @@ const RatingHistoryPage = () => {
                                                                         <div className="flex items-center justify-between mb-3">
                                                                             <h4 className="font-semibold text-green-400">📚 Study Performance</h4>
                                                                             <span className="text-lg font-bold text-green-400">
-                                                                                {day.breakdown.studyScore > 0 ? '+' : ''}{day.breakdown.studyScore}
+                                                                                {day.breakdown.studyScore > 0 ? '+' : ''}{Math.round(day.breakdown.studyScore)}
                                                                             </span>
                                                                         </div>
                                                                         <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -356,7 +356,7 @@ const RatingHistoryPage = () => {
                                                                         <div className="flex items-center justify-between mb-3">
                                                                             <h4 className="font-semibold text-purple-400">📅 Plan Completion</h4>
                                                                             <span className="text-lg font-bold text-purple-400">
-                                                                                {day.breakdown.planScore > 0 ? '+' : ''}{day.breakdown.planScore}
+                                                                                {day.breakdown.planScore > 0 ? '+' : ''}{Math.round(day.breakdown.planScore)}
                                                                             </span>
                                                                         </div>
                                                                         <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -369,7 +369,7 @@ const RatingHistoryPage = () => {
                                                                         <div className="flex items-center justify-between mb-3">
                                                                             <h4 className="font-semibold text-blue-400">⏱️ Activity Tracker</h4>
                                                                             <span className="text-lg font-bold text-blue-400">
-                                                                                {day.breakdown.activityScore > 0 ? '+' : ''}{day.breakdown.activityScore}
+                                                                                {day.breakdown.activityScore > 0 ? '+' : ''}{Math.round(day.breakdown.activityScore)}
                                                                             </span>
                                                                         </div>
                                                                         <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -382,7 +382,7 @@ const RatingHistoryPage = () => {
                                                                         <div className="flex items-center justify-between mb-3">
                                                                             <h4 className="font-semibold text-orange-400">💰 Budget Discipline</h4>
                                                                             <span className={`text-lg font-bold ${day.breakdown.budgetScore < 0 ? 'text-red-400' : 'text-orange-400'}`}>
-                                                                                {day.breakdown.budgetScore > 0 ? '+' : ''}{day.breakdown.budgetScore}
+                                                                                {day.breakdown.budgetScore > 0 ? '+' : ''}{Math.round(day.breakdown.budgetScore)}
                                                                             </span>
                                                                         </div>
                                                                         <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -396,7 +396,7 @@ const RatingHistoryPage = () => {
                                                                     <div className="mt-4 bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-900/30">
                                                                         <div className="flex items-center justify-between">
                                                                             <h4 className="font-semibold text-red-400">⚠️ Discipline Penalty</h4>
-                                                                            <span className="text-lg font-bold text-red-400">{day.breakdown.disciplinePenalty}</span>
+                                                                            <span className="text-lg font-bold text-red-400">{Math.round(day.breakdown.disciplinePenalty)}</span>
                                                                         </div>
                                                                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                                                                             Late task creation or deletions
@@ -410,7 +410,7 @@ const RatingHistoryPage = () => {
                                                                         <div className="flex items-center justify-between">
                                                                             <h4 className="font-semibold text-cyan-400">⚖️ Relative Adjustment</h4>
                                                                             <span className={`text-lg font-bold ${day.breakdown.relativeAdjustment > 0 ? 'text-cyan-400' : 'text-red-400'}`}>
-                                                                                {day.breakdown.relativeAdjustment > 0 ? '+' : ''}{day.breakdown.relativeAdjustment}
+                                                                                {day.breakdown.relativeAdjustment > 0 ? '+' : ''}{Math.round(day.breakdown.relativeAdjustment)}
                                                                             </span>
                                                                         </div>
                                                                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
