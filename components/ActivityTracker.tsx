@@ -17,20 +17,17 @@ export default function ActivityTracker() {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Form State
     const [type, setType] = useState('STUDY');
     const [name, setName] = useState('');
     const [notes, setNotes] = useState('');
     const [plannedDuration, setPlannedDuration] = useState('25');
 
-    // Timer State
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [targetTime, setTargetTime] = useState<Date | null>(null);
     const [remainingSeconds, setRemainingSeconds] = useState(0);
     const [pausedAt, setPausedAt] = useState<number | null>(null);
 
-    // UI State - Use CSS-based fullscreen for better mobile support
     const [isFullScreen, setIsFullScreen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +63,6 @@ export default function ActivityTracker() {
                         setNotes(data.notes || '');
                         setPlannedDuration(data.plannedDuration || '25');
                         setAlarmPlayed(data.alarmPlayed || false);
-
                         if (data.isPaused && data.pausedAt) {
                             setPausedAt(data.pausedAt);
                             setRemainingSeconds(data.pausedAt);
@@ -105,7 +101,6 @@ export default function ActivityTracker() {
         } catch (e) {
             console.error("Failed to play alarm", e);
         }
-
         const count = 200;
         const defaults = { origin: { y: 0.7 }, zIndex: 9999 };
         function fire(particleRatio: number, opts: confetti.Options) {
@@ -207,7 +202,6 @@ export default function ActivityTracker() {
         const remainingMin = remainingSeconds / 60;
         let actualDurationMinutes = Math.floor(plannedMin - remainingMin);
         actualDurationMinutes = Math.max(1, actualDurationMinutes);
-
         if (remainingSeconds > 60) {
             const shortfall = Math.ceil(remainingMin);
             const shortfallPercent = Math.round((shortfall / plannedMin) * 100);
@@ -217,7 +211,6 @@ export default function ActivityTracker() {
             );
             if (!confirmed) return;
         }
-
         try {
             const res = await fetch('/api/activities', {
                 method: 'POST',
@@ -241,12 +234,8 @@ export default function ActivityTracker() {
         }
     };
 
-    // CSS-based fullscreen toggle (works on mobile)
-    const toggleFullScreen = () => {
-        setIsFullScreen(!isFullScreen);
-    };
+    const toggleFullScreen = () => setIsFullScreen(!isFullScreen);
 
-    // Lock body scroll when fullscreen
     useEffect(() => {
         if (isFullScreen) {
             document.body.style.overflow = 'hidden';
@@ -270,52 +259,21 @@ export default function ActivityTracker() {
     const remainingStatsMinutes = totalMinutes % 60;
     const todayActivities = activities.filter(act => new Date(act.date).toDateString() === new Date().toDateString());
     const todayMinutes = todayActivities.reduce((acc, act) => acc + act.duration, 0);
-
     const displayMinutes = Math.floor(remainingSeconds / 60);
     const displaySeconds = remainingSeconds % 60;
     const formattedTime = `${displayMinutes} : ${String(displaySeconds).padStart(2, '0')}`;
-
     const totalSeconds = (parseInt(plannedDuration) || 25) * 60;
     const progress = remainingSeconds / totalSeconds;
     const timerActive = targetTime !== null;
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-3">
-                    <span className="text-5xl">⏱️</span>Activity Tracker
-                </h1>
-                <p className="text-gray-500 dark:text-gray-400 text-lg">Countdown timer & activity logging (strict mode)</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
-                    <div className="text-sm opacity-90 mb-1">Total Time</div>
-                    <div className="text-3xl font-bold">{totalHours}h {remainingStatsMinutes}m</div>
-                </div>
-                <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
-                    <div className="text-sm opacity-90 mb-1">Today</div>
-                    <div className="text-3xl font-bold">{Math.floor(todayMinutes / 60)}h {todayMinutes % 60}m</div>
-                </div>
-                <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 text-white shadow-lg">
-                    <div className="text-sm opacity-90 mb-1">Activities Logged</div>
-                    <div className="text-3xl font-bold">{activities.length}</div>
-                </div>
-            </div>
-
-            {/* Fullscreen Overlay */}
+        <>
+            {/* Fullscreen Overlay - Above everything */}
             {isFullScreen && timerActive && (
-                <div className="fixed inset-0 z-50 bg-[#4a1942] flex flex-col items-center justify-center p-6">
-                    {/* Close button */}
-                    <button
-                        onClick={() => setIsFullScreen(false)}
-                        className="absolute top-4 right-4 p-3 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all"
-                        aria-label="Exit Fullscreen"
-                    >
-                        <X size={28} />
+                <div className="fixed inset-0 z-[9999] bg-[#4a1942] flex flex-col items-center justify-center p-6">
+                    <button onClick={() => setIsFullScreen(false)} className="absolute top-6 right-6 p-3 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all" aria-label="Exit Fullscreen">
+                        <X size={32} />
                     </button>
-
-                    {/* Timer Circle */}
                     <div className="relative w-64 h-64 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-96 lg:h-96 mb-8">
                         <svg viewBox="0 0 200 200" className="w-full h-full">
                             <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
@@ -324,148 +282,145 @@ export default function ActivityTracker() {
                             <circle cx="100" cy="100" r="90" fill="none" stroke="#F59E0B" strokeWidth="4" opacity="0.5" />
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-xs uppercase tracking-[0.2em] mb-2 font-medium text-white/60">
-                                {remainingSeconds === 0 ? 'Complete' : 'Sprint time'}
-                            </span>
-                            <span className="text-6xl sm:text-7xl md:text-8xl font-bold tracking-tight text-white">
-                                {formattedTime}
-                            </span>
+                            <span className="text-xs uppercase tracking-[0.2em] mb-2 font-medium text-white/60">{remainingSeconds === 0 ? 'Complete' : 'Sprint time'}</span>
+                            <span className="text-6xl sm:text-7xl md:text-8xl font-bold tracking-tight text-white">{formattedTime}</span>
                         </div>
                     </div>
-
-                    {/* Control Buttons */}
                     <div className="flex items-center gap-6 mb-8">
-                        <button onClick={handleResetTimer} className="p-4 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all" aria-label="Reset Timer">
-                            <RotateCcw size={28} />
-                        </button>
+                        <button onClick={handleResetTimer} className="p-4 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all" aria-label="Reset Timer"><RotateCcw size={28} /></button>
                         {remainingSeconds > 0 && (
                             <button onClick={isPaused || !isTimerRunning ? handleResumeTimer : handlePauseTimer} className="w-16 h-16 rounded-full bg-amber-400 hover:bg-amber-500 text-white flex items-center justify-center shadow-xl shadow-amber-400/30 transition-all hover:scale-105 active:scale-95" aria-label={isPaused ? "Resume Timer" : "Pause Timer"}>
                                 {isPaused || !isTimerRunning ? <Play size={28} fill="currentColor" className="ml-1" /> : <Pause size={28} fill="currentColor" />}
                             </button>
                         )}
-                        <button onClick={() => setIsFullScreen(false)} className="p-4 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all" aria-label="Exit Fullscreen">
-                            <Minimize size={28} />
-                        </button>
+                        <button onClick={() => setIsFullScreen(false)} className="p-4 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all" aria-label="Exit Fullscreen"><Minimize size={28} /></button>
                     </div>
-
-                    {/* Stop & Log button */}
                     <button onClick={handleStopTimer} className={`px-8 py-4 text-white rounded-xl font-semibold transition-all text-lg flex items-center justify-center gap-2 ${remainingSeconds === 0 ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gradient-to-r from-red-400 to-orange-500 hover:shadow-lg hover:shadow-red-500/40'}`}>
                         {remainingSeconds === 0 ? <>✅ Log Completed Activity</> : <><Square size={18} fill="currentColor" /> Stop & Log</>}
                     </button>
                 </div>
             )}
 
-            {/* Timer Card */}
-            <div ref={containerRef} className="rounded-2xl shadow-sm border p-8 flex flex-col justify-center items-center bg-white dark:bg-[#161b22] border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-3 mb-6 w-full">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-2xl">⏱️</div>
-                    <div>
-                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Countdown Timer</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Timer stops automatically at zero</p>
+            <div className="space-y-8">
+                <div>
+                    <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-3">
+                        <span className="text-5xl">⏱️</span>Activity Tracker
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">Countdown timer & activity logging (strict mode)</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+                    <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+                        <div className="text-sm opacity-90 mb-1">Total Time</div>
+                        <div className="text-3xl font-bold">{totalHours}h {remainingStatsMinutes}m</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
+                        <div className="text-sm opacity-90 mb-1">Today</div>
+                        <div className="text-3xl font-bold">{Math.floor(todayMinutes / 60)}h {todayMinutes % 60}m</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 text-white shadow-lg">
+                        <div className="text-sm opacity-90 mb-1">Activities Logged</div>
+                        <div className="text-3xl font-bold">{activities.length}</div>
                     </div>
                 </div>
 
-                {timerActive && (
-                    <div className="flex flex-col items-center mb-8">
-                        <div className="relative w-64 h-64 mb-8">
-                            <svg viewBox="0 0 200 200" className="w-full h-full">
-                                <circle cx="100" cy="100" r="90" fill="none" stroke="#e5e7eb" strokeWidth="4" />
-                                <defs><clipPath id="circleClip"><circle cx="100" cy="100" r="86" /></clipPath></defs>
-                                <rect x="10" y={200 - (progress * 180)} width="180" height={progress * 180} fill={currentTheme.fillColor} clipPath="url(#circleClip)" className="transition-all duration-1000 ease-linear" />
-                                <circle cx="100" cy="100" r="90" fill="none" stroke={currentTheme.fillColor} strokeWidth="4" opacity="0.5" />
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-xs uppercase tracking-[0.2em] mb-2 font-medium text-gray-400">
-                                    {remainingSeconds === 0 ? 'Complete' : 'Sprint time'}
-                                </span>
-                                <span className="text-5xl font-bold tracking-tight text-gray-800 dark:text-white">
-                                    {formattedTime}
-                                </span>
+                <div ref={containerRef} className="rounded-2xl shadow-sm border p-8 flex flex-col justify-center items-center bg-white dark:bg-[#161b22] border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-3 mb-6 w-full">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-2xl">⏱️</div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Countdown Timer</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Timer stops automatically at zero</p>
+                        </div>
+                    </div>
+
+                    {timerActive && (
+                        <div className="flex flex-col items-center mb-8">
+                            <div className="relative w-64 h-64 mb-8">
+                                <svg viewBox="0 0 200 200" className="w-full h-full">
+                                    <circle cx="100" cy="100" r="90" fill="none" stroke="#e5e7eb" strokeWidth="4" />
+                                    <defs><clipPath id="circleClip"><circle cx="100" cy="100" r="86" /></clipPath></defs>
+                                    <rect x="10" y={200 - (progress * 180)} width="180" height={progress * 180} fill={currentTheme.fillColor} clipPath="url(#circleClip)" className="transition-all duration-1000 ease-linear" />
+                                    <circle cx="100" cy="100" r="90" fill="none" stroke={currentTheme.fillColor} strokeWidth="4" opacity="0.5" />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span className="text-xs uppercase tracking-[0.2em] mb-2 font-medium text-gray-400">{remainingSeconds === 0 ? 'Complete' : 'Sprint time'}</span>
+                                    <span className="text-5xl font-bold tracking-tight text-gray-800 dark:text-white">{formattedTime}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-6 mb-6">
+                                <button onClick={handleResetTimer} className="p-4 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" aria-label="Reset Timer"><RotateCcw size={28} /></button>
+                                {remainingSeconds > 0 && (
+                                    <button onClick={isPaused || !isTimerRunning ? handleResumeTimer : handlePauseTimer} className="w-16 h-16 rounded-full bg-amber-400 hover:bg-amber-500 text-white flex items-center justify-center shadow-xl shadow-amber-400/30 transition-all hover:scale-105 active:scale-95" aria-label={isPaused ? "Resume Timer" : "Pause Timer"}>
+                                        {isPaused || !isTimerRunning ? <Play size={28} fill="currentColor" className="ml-1" /> : <Pause size={28} fill="currentColor" />}
+                                    </button>
+                                )}
+                                <button onClick={toggleFullScreen} className="p-4 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" aria-label="Toggle Fullscreen"><Maximize size={28} /></button>
                             </div>
                         </div>
+                    )}
 
-                        <div className="flex items-center gap-6 mb-6">
-                            <button onClick={handleResetTimer} className="p-4 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" aria-label="Reset Timer">
-                                <RotateCcw size={28} />
-                            </button>
-                            {remainingSeconds > 0 && (
-                                <button onClick={isPaused || !isTimerRunning ? handleResumeTimer : handlePauseTimer} className="w-16 h-16 rounded-full bg-amber-400 hover:bg-amber-500 text-white flex items-center justify-center shadow-xl shadow-amber-400/30 transition-all hover:scale-105 active:scale-95" aria-label={isPaused ? "Resume Timer" : "Pause Timer"}>
-                                    {isPaused || !isTimerRunning ? <Play size={28} fill="currentColor" className="ml-1" /> : <Pause size={28} fill="currentColor" />}
+                    <div className="space-y-4 w-full max-w-md">
+                        <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Activity Type</label>
+                            <select className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all bg-gray-50 dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-amber-500" value={type} onChange={(e) => setType(e.target.value)} disabled={timerActive}>
+                                <option value="STUDY">📚 Study</option>
+                                <option value="CODE">💻 Code</option>
+                                <option value="EXERCISE">💪 Exercise</option>
+                                <option value="READING">📖 Reading</option>
+                                <option value="OTHER">⭐ Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Planned Duration (minutes)</label>
+                            <input className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all bg-gray-50 dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-amber-500" type="number" min="1" value={plannedDuration} onChange={(e) => setPlannedDuration(e.target.value)} disabled={timerActive} placeholder="e.g., 25" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Activity Name (Optional)</label>
+                            <input className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all bg-gray-50 dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-amber-500" type="text" value={name} onChange={(e) => setName(e.target.value)} disabled={timerActive} placeholder="e.g., Calculus homework" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Notes (Optional)</label>
+                            <textarea className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none resize-none transition-all bg-gray-50 dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-amber-500" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={timerActive} placeholder="What did you work on?" />
+                        </div>
+                        <div className="pt-2">
+                            {!timerActive ? (
+                                <button onClick={handleStartTimer} className="w-full px-6 py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-green-500/40 transition-all duration-300 text-lg flex items-center justify-center gap-2">
+                                    <Play size={20} fill="currentColor" /> Start Countdown
+                                </button>
+                            ) : (
+                                <button onClick={handleStopTimer} className={`w-full px-6 py-4 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-lg flex items-center justify-center gap-2 ${remainingSeconds === 0 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:shadow-blue-500/40' : 'bg-gradient-to-r from-red-400 to-orange-500 hover:shadow-red-500/40'}`}>
+                                    {remainingSeconds === 0 ? <>✅ Log Completed Activity</> : <><Square size={18} fill="currentColor" /> Stop & Log</>}
                                 </button>
                             )}
-                            <button onClick={toggleFullScreen} className="p-4 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" aria-label="Toggle Fullscreen">
-                                <Maximize size={28} />
-                            </button>
                         </div>
                     </div>
-                )}
+                </div>
 
-                {/* Form */}
-                <div className="space-y-4 w-full max-w-md">
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Activity Type</label>
-                        <select className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all bg-gray-50 dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-amber-500" value={type} onChange={(e) => setType(e.target.value)} disabled={timerActive}>
-                            <option value="STUDY">📚 Study</option>
-                            <option value="CODE">💻 Code</option>
-                            <option value="EXERCISE">💪 Exercise</option>
-                            <option value="READING">📖 Reading</option>
-                            <option value="OTHER">⭐ Other</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Planned Duration (minutes)</label>
-                        <input className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all bg-gray-50 dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-amber-500" type="number" min="1" value={plannedDuration} onChange={(e) => setPlannedDuration(e.target.value)} disabled={timerActive} placeholder="e.g., 25" />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Activity Name (Optional)</label>
-                        <input className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all bg-gray-50 dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-amber-500" type="text" value={name} onChange={(e) => setName(e.target.value)} disabled={timerActive} placeholder="e.g., Calculus homework" />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Notes (Optional)</label>
-                        <textarea className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none resize-none transition-all bg-gray-50 dark:bg-[#0d1117] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:border-amber-500" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={timerActive} placeholder="What did you work on?" />
-                    </div>
-
-                    <div className="pt-2">
-                        {!timerActive ? (
-                            <button onClick={handleStartTimer} className="w-full px-6 py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-green-500/40 transition-all duration-300 text-lg flex items-center justify-center gap-2">
-                                <Play size={20} fill="currentColor" /> Start Countdown
-                            </button>
-                        ) : (
-                            <button onClick={handleStopTimer} className={`w-full px-6 py-4 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-lg flex items-center justify-center gap-2 ${remainingSeconds === 0 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:shadow-blue-500/40' : 'bg-gradient-to-r from-red-400 to-orange-500 hover:shadow-red-500/40'}`}>
-                                {remainingSeconds === 0 ? <>✅ Log Completed Activity</> : <><Square size={18} fill="currentColor" /> Stop & Log</>}
-                            </button>
-                        )}
-                    </div>
+                <div className="bg-white dark:bg-[#161b22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Recent Activities</h3>
+                    {loading ? (
+                        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+                    ) : activities.length === 0 ? (
+                        <p className="text-gray-500 dark:text-gray-400">No activities logged yet. Start your first timer!</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {activities.slice(0, 10).map((activity) => {
+                                const config = activityConfig[activity.type] || activityConfig['OTHER'];
+                                return (
+                                    <div key={activity.id} className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#0d1117] transition-colors">
+                                        <div className={`text-3xl bg-gradient-to-br ${config.gradient} rounded-xl p-3 text-white`}>{config.icon}</div>
+                                        <div className="flex-1">
+                                            <div className="font-semibold text-gray-800 dark:text-gray-100">{activity.name || activity.type}</div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-400">{activity.duration} minutes · {new Date(activity.date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</div>
+                                        </div>
+                                        <div className={`text-2xl font-bold ${config.color}`}>{activity.duration}m</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
-
-            <div className="bg-white dark:bg-[#161b22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Recent Activities</h3>
-                {loading ? (
-                    <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-                ) : activities.length === 0 ? (
-                    <p className="text-gray-500 dark:text-gray-400">No activities logged yet. Start your first timer!</p>
-                ) : (
-                    <div className="space-y-3">
-                        {activities.slice(0, 10).map((activity) => {
-                            const config = activityConfig[activity.type] || activityConfig['OTHER'];
-                            return (
-                                <div key={activity.id} className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#0d1117] transition-colors">
-                                    <div className={`text-3xl bg-gradient-to-br ${config.gradient} rounded-xl p-3 text-white`}>{config.icon}</div>
-                                    <div className="flex-1">
-                                        <div className="font-semibold text-gray-800 dark:text-gray-100">{activity.name || activity.type}</div>
-                                        <div className="text-sm text-gray-500 dark:text-gray-400">{activity.duration} minutes · {new Date(activity.date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</div>
-                                    </div>
-                                    <div className={`text-2xl font-bold ${config.color}`}>{activity.duration}m</div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-        </div>
+        </>
     );
 }
