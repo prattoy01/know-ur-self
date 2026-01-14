@@ -129,9 +129,9 @@ async function calculateDPS(userId: string, date: Date = new Date()): Promise<DP
     let planScore = 0;
     let disciplinePenalty = 0;
 
-    // No plan penalty
+    // No plan penalty (mild encouragement to plan)
     if (tasksAll.length === 0) {
-        disciplinePenalty -= 50;
+        disciplinePenalty -= 10;
     } else {
         // Creation penalties (weighted by duration)
         for (const t of tasksAll) {
@@ -140,9 +140,9 @@ async function calculateDPS(userId: string, date: Date = new Date()): Promise<DP
             const weight = duration / 30;
 
             let basePenalty = 0;
-            if (hour >= 21) basePenalty = -6;
-            else if (hour >= 9) basePenalty = -4;
-            else if (hour >= 6) basePenalty = -2;
+            if (hour >= 21) basePenalty = -3;
+            else if (hour >= 9) basePenalty = -2;
+            else if (hour >= 6) basePenalty = -1;
 
             disciplinePenalty += basePenalty * weight;
         }
@@ -165,7 +165,7 @@ async function calculateDPS(userId: string, date: Date = new Date()): Promise<DP
             .filter(t => t.isCompleted)
             .reduce((sum, t) => sum + (t.estimatedDuration || 30), 0);
         const completionRate = totalMinutes > 0 ? completedMinutes / totalMinutes : 0;
-        planScore = Math.round((completionRate * 50) - 25);
+        planScore = Math.round(completionRate * 40);
     }
 
     // 2. STUDY SCORE
@@ -180,7 +180,7 @@ async function calculateDPS(userId: string, date: Date = new Date()): Promise<DP
         studyScore = 30;
     } else {
         const ratio = studyMinutes / goalMinutes;
-        studyScore = Math.round((ratio * 60) - 30);
+        studyScore = Math.round(ratio * 30);
     }
 
     // 3. ACTIVITY SCORE
@@ -225,7 +225,10 @@ async function calculateDPS(userId: string, date: Date = new Date()): Promise<DP
         }
     }
 
-    // 5. RELATIVE ADJUSTMENT (vs 7-day avg)
+    // 5. BASELINE ENGAGEMENT BONUS (reward for being active)
+    const baselineBonus = 10;
+
+    // 6. RELATIVE ADJUSTMENT (vs 7-day avg)
     const history = await prisma.ratingHistory.findMany({
         where: { userId },
         orderBy: { date: 'desc' },
@@ -233,14 +236,14 @@ async function calculateDPS(userId: string, date: Date = new Date()): Promise<DP
     });
 
     let relativeAdjustment = 0;
-    const rawDPS = planScore + studyScore + activityScore + budgetScore + disciplinePenalty;
+    const rawDPS = planScore + studyScore + activityScore + budgetScore + disciplinePenalty + baselineBonus;
 
     if (history.length > 0) {
         const avgPerformance = history.reduce((acc, h) => acc + (h.change || 0), 0) / history.length;
         relativeAdjustment = Math.round((rawDPS - avgPerformance) * 0.1);
     }
 
-    // 6. TOTAL DPS (clamped to ±200)
+    // 7. TOTAL DPS (clamped to ±200)
     const totalDPS = Math.max(-200, Math.min(200, rawDPS + relativeAdjustment));
 
     return {
