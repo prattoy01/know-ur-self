@@ -105,7 +105,7 @@ export default function DashboardShell({
                         <DashboardLink href="/dashboard/plan" icon="📅" label="Daily Plan" onClick={() => setIsSidebarOpen(false)} />
                         <DashboardLink href="/dashboard/activities" icon="⏱️" label="Activity Tracker" onClick={() => setIsSidebarOpen(false)} />
                         <DashboardLink href="/dashboard/budget" icon="💰" label="Budget & Finance" onClick={() => setIsSidebarOpen(false)} />
-                        <DashboardLink href="/dashboard/study" icon="📚" label="Academic & Study" onClick={() => setIsSidebarOpen(false)} />
+                        <DashboardLink href="/dashboard/study" icon="📝" label="My Notebooks" onClick={() => setIsSidebarOpen(false)} />
                         <DashboardLink href="/dashboard/history" icon="📉" label="Rating History" onClick={() => setIsSidebarOpen(false)} />
                         <DashboardLink href="/dashboard/portfolio" icon="🌐" label="Public Portfolio" onClick={() => setIsSidebarOpen(false)} />
                         <div className="my-2 border-t border-gray-200 dark:border-gray-800"></div>
