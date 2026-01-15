@@ -50,6 +50,8 @@ model User {
   tasks          Task[]
   subjects       Subject[]
   studySessions  StudySession[]
+  notes          Note[]
+  noteLabels     NoteLabel[]
   portfolio      PortfolioSettings?
   
   // Portfolio Relations
@@ -427,4 +429,41 @@ model PasswordResetRequest {
   
   @@index([userId])
   @@index([status])
+}
+
+// Personal Notebook (Google Keep-style)
+model Note {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title       String?
+  content     String   @db.Text
+  color       String   @default("#ffffff")
+  isPinned    Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+  
+  labels      NoteLabel[] @relation("NoteLabels")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([isPinned])
+}
+
+model NoteLabel {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name   String
+  color  String @default("#6b7280")
+  
+  notes  Note[] @relation("NoteLabels")
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, name])
+  @@index([userId])
 }

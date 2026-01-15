@@ -1,10 +1,9 @@
-import StudyTracker from '@/components/StudyTracker';
+import Notebook from '@/components/Notebook';
 
-export default function StudyPage() {
+export default function NotesPage() {
     return (
         <div>
-            <h1 style={{ marginBottom: '2rem' }}>Academic & Study Tracking</h1>
-            <StudyTracker />
+            <Notebook />
         </div>
     );
 }
