@@ -79,6 +79,7 @@ model User {
   sessions       Session[]
   
   resumeUrl      String?  // URL to resume/CV file
+  borrowLendRecords BorrowLend[]
 }
 
 // NextAuth Models
@@ -466,4 +467,25 @@ model NoteLabel {
   
   @@unique([userId, name])
   @@index([userId])
+}
+
+// Borrow & Lend Money Tracking
+model BorrowLend {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String   // "BORROW" | "LEND"
+  personName  String   // Name of person borrowed from / lent to
+  amount      Float
+  description String?
+  isSettled   Boolean  @default(false)
+  dueDate     DateTime?
+  settledAt   DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([type])
 }

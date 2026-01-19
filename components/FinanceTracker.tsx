@@ -9,6 +9,19 @@ export default function FinanceTracker() {
     const [loading, setLoading] = useState(true);
     const [isReportView, setIsReportView] = useState(false);
     const [showAllExpenses, setShowAllExpenses] = useState(false);
+    const [borrowLendRecords, setBorrowLendRecords] = useState<any[]>([]);
+
+    // Borrow Form
+    const [borrowPersonName, setBorrowPersonName] = useState('');
+    const [borrowAmount, setBorrowAmount] = useState('');
+    const [borrowDesc, setBorrowDesc] = useState('');
+    const [borrowDueDate, setBorrowDueDate] = useState('');
+
+    // Lend Form
+    const [lendPersonName, setLendPersonName] = useState('');
+    const [lendAmount, setLendAmount] = useState('');
+    const [lendDesc, setLendDesc] = useState('');
+    const [lendDueDate, setLendDueDate] = useState('');
 
     // Expense Form
     const [amount, setAmount] = useState('');
@@ -25,10 +38,11 @@ export default function FinanceTracker() {
 
     const fetchData = async () => {
         try {
-            const [expRes, budgetRes, incomeRes] = await Promise.all([
+            const [expRes, budgetRes, incomeRes, borrowLendRes] = await Promise.all([
                 fetch('/api/finance/expenses'),
                 fetch('/api/finance/budget'),
-                fetch('/api/finance/income')
+                fetch('/api/finance/income'),
+                fetch('/api/finance/borrowlend')
             ]);
 
             if (expRes.ok) {
@@ -43,6 +57,10 @@ export default function FinanceTracker() {
             if (incomeRes.ok) {
                 const data = await incomeRes.json();
                 setIncomes(data.incomes);
+            }
+            if (borrowLendRes.ok) {
+                const data = await borrowLendRes.json();
+                setBorrowLendRecords(data.records);
             }
         } catch (err) {
             console.error(err);
@@ -99,6 +117,61 @@ export default function FinanceTracker() {
         }
     };
 
+    const handleAddBorrow = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const res = await fetch('/api/finance/borrowlend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'BORROW',
+                personName: borrowPersonName,
+                amount: borrowAmount,
+                description: borrowDesc,
+                dueDate: borrowDueDate || null
+            }),
+        });
+        if (res.ok) {
+            fetchData();
+            setBorrowPersonName('');
+            setBorrowAmount('');
+            setBorrowDesc('');
+            setBorrowDueDate('');
+        }
+    };
+
+    const handleAddLend = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const res = await fetch('/api/finance/borrowlend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'LEND',
+                personName: lendPersonName,
+                amount: lendAmount,
+                description: lendDesc,
+                dueDate: lendDueDate || null
+            }),
+        });
+        if (res.ok) {
+            fetchData();
+            setLendPersonName('');
+            setLendAmount('');
+            setLendDesc('');
+            setLendDueDate('');
+        }
+    };
+
+    const handleSettleRecord = async (id: string) => {
+        const res = await fetch('/api/finance/borrowlend', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+        });
+        if (res.ok) {
+            fetchData();
+        }
+    };
+
     // Calculations
     const totalSpent = expenses.reduce((acc, curr) => acc + curr.amount, 0);
     const totalIncome = incomes.reduce((acc, curr) => acc + curr.amount, 0);
@@ -106,6 +179,12 @@ export default function FinanceTracker() {
     const budgetLimit = budget ? budget.amount : 0;
     const remaining = budgetLimit - totalSpent;
     const percentage = budgetLimit > 0 ? Math.min((totalSpent / budgetLimit) * 100, 100) : 0;
+
+    // Borrow/Lend Calculations
+    const activeRecords = borrowLendRecords.filter(r => !r.isSettled);
+    const settledRecords = borrowLendRecords.filter(r => r.isSettled);
+    const totalBorrowed = activeRecords.filter(r => r.type === 'BORROW').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalLent = activeRecords.filter(r => r.type === 'LEND').reduce((acc, curr) => acc + curr.amount, 0);
 
     /* const downloadPDF = async () => {
         const doc = new jsPDF();
@@ -561,6 +640,223 @@ export default function FinanceTracker() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                             ${totalSpent.toFixed(2)} of ${budgetLimit.toFixed(2)} ({percentage.toFixed(0)}%)
                         </p>
+                    </div>
+                )}
+            </div>
+
+            {/* Borrow & Lend Section */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                    <span className="text-4xl">🤝</span>
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Borrow & Lend</h2>
+                        <p className="text-gray-500 dark:text-gray-400">Track money you&apos;ve borrowed or lent</p>
+                    </div>
+                </div>
+
+                {/* Borrow/Lend Summary Cards */}
+                <div className="grid grid-cols-2 gap-4 md:gap-6">
+                    <div className="bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl p-6 text-white shadow-lg">
+                        <div className="text-sm opacity-90 mb-1">You Owe</div>
+                        <div className="text-3xl font-bold">${totalBorrowed.toFixed(2)}</div>
+                        <div className="text-xs opacity-80 mt-1">
+                            {activeRecords.filter(r => r.type === 'BORROW').length} active
+                        </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-cyan-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg">
+                        <div className="text-sm opacity-90 mb-1">Owed to You</div>
+                        <div className="text-3xl font-bold">${totalLent.toFixed(2)}</div>
+                        <div className="text-xs opacity-80 mt-1">
+                            {activeRecords.filter(r => r.type === 'LEND').length} active
+                        </div>
+                    </div>
+                </div>
+
+                {/* Borrow & Lend Forms */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Borrow Money Form */}
+                    <div className="bg-white dark:bg-[#161b22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-2xl">
+                                📥
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Borrow Money</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Record money you borrowed</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleAddBorrow} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    From (Person Name)
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-amber-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                                    type="text"
+                                    value={borrowPersonName}
+                                    onChange={(e) => setBorrowPersonName(e.target.value)}
+                                    placeholder="e.g., John Doe"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Amount ($)
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-amber-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                                    type="number"
+                                    step="0.01"
+                                    value={borrowAmount}
+                                    onChange={(e) => setBorrowAmount(e.target.value)}
+                                    placeholder="0.00"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Due Date (Optional)
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-amber-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                                    type="date"
+                                    value={borrowDueDate}
+                                    onChange={(e) => setBorrowDueDate(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Description (Optional)
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-amber-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                                    type="text"
+                                    value={borrowDesc}
+                                    onChange={(e) => setBorrowDesc(e.target.value)}
+                                    placeholder="e.g., For rent payment"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="w-full px-6 py-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-amber-500/40 transition-all duration-300"
+                            >
+                                ➕ Add Borrowed
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Lend Money Form */}
+                    <div className="bg-white dark:bg-[#161b22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center text-2xl">
+                                📤
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Lend Money</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Record money you lent</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleAddLend} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    To (Person Name)
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                                    type="text"
+                                    value={lendPersonName}
+                                    onChange={(e) => setLendPersonName(e.target.value)}
+                                    placeholder="e.g., Jane Smith"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Amount ($)
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                                    type="number"
+                                    step="0.01"
+                                    value={lendAmount}
+                                    onChange={(e) => setLendAmount(e.target.value)}
+                                    placeholder="0.00"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Due Date (Optional)
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                                    type="date"
+                                    value={lendDueDate}
+                                    onChange={(e) => setLendDueDate(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Description (Optional)
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all bg-white dark:bg-[#0d1117] text-gray-900 dark:text-gray-100"
+                                    type="text"
+                                    value={lendDesc}
+                                    onChange={(e) => setLendDesc(e.target.value)}
+                                    placeholder="e.g., Emergency help"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="w-full px-6 py-3 bg-gradient-to-r from-cyan-400 to-teal-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-teal-500/40 transition-all duration-300"
+                            >
+                                ➕ Add Lent
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {/* Active Borrow/Lend Records */}
+                {activeRecords.length > 0 && (
+                    <div className="bg-white dark:bg-[#161b22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Active Records</h3>
+                        <div className="space-y-3">
+                            {activeRecords.map((record) => (
+                                <div
+                                    key={record.id}
+                                    className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#0d1117] transition-colors"
+                                >
+                                    <div className="text-3xl">
+                                        {record.type === 'BORROW' ? '📥' : '📤'}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="font-semibold text-gray-800 dark:text-gray-100">
+                                            {record.type === 'BORROW' ? 'From' : 'To'}: {record.personName}
+                                        </div>
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                            {record.description || (record.type === 'BORROW' ? 'Borrowed' : 'Lent')}
+                                            {record.dueDate && (
+                                                <span className="ml-2 text-orange-500">
+                                                    • Due: {new Date(record.dueDate).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className={`text-xl font-bold ${record.type === 'BORROW' ? 'text-amber-600' : 'text-teal-600'}`}>
+                                        ${record.amount.toFixed(2)}
+                                    </div>
+                                    <button
+                                        onClick={() => handleSettleRecord(record.id)}
+                                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors text-sm"
+                                    >
+                                        ✓ Settle
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
