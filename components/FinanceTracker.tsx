@@ -291,7 +291,9 @@ export default function FinanceTracker() {
         'TRAVEL': '🚗',
         'BOOKS': '📚',
         'ONLINE': '💻',
-        'OTHER': '📦'
+        'OTHER': '📦',
+        'LEND': '📤',
+        'BORROW_REPAYMENT': '💳'
     };
 
     const incomeIcons: Record<string, string> = {

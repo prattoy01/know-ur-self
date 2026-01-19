@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifySession } from '@/lib/auth';
+import { RatingEngine } from '@/lib/rating-engine';
 
 export async function GET() {
     const session = await verifySession();
@@ -44,6 +45,38 @@ export async function POST(request: Request) {
             }
         });
 
+        // If LEND: Create an expense (money going out of your pocket)
+        if (type === 'LEND') {
+            await prisma.expense.create({
+                data: {
+                    userId: session.userId,
+                    amount: Number(amount),
+                    category: 'LEND',
+                    description: `Lent to ${personName}${description ? ` - ${description}` : ''}`,
+                }
+            });
+
+            // Trigger Rating Engine Update
+            try {
+                await RatingEngine.checkAndFinalizePastDays(session.userId);
+                await RatingEngine.processEvent({ type: 'EXPENSE_LOGGED', userId: session.userId });
+            } catch (e) {
+                console.error('Rating update failed:', e);
+            }
+        }
+
+        // If BORROW: Create an income entry (money coming into your pocket)
+        if (type === 'BORROW') {
+            await prisma.income.create({
+                data: {
+                    userId: session.userId,
+                    amount: Number(amount),
+                    source: 'OTHER',
+                    description: `Borrowed from ${personName}${description ? ` - ${description}` : ''}`,
+                }
+            });
+        }
+
         return NextResponse.json({ success: true, record });
     } catch (error: any) {
         return NextResponse.json({ error: error.message || 'Failed to create record' }, { status: 500 });
@@ -77,6 +110,26 @@ export async function PATCH(request: Request) {
                 settledAt: new Date()
             }
         });
+
+        // If settling a BORROW: Create an expense (you're paying back borrowed money)
+        if (existing.type === 'BORROW') {
+            await prisma.expense.create({
+                data: {
+                    userId: session.userId,
+                    amount: existing.amount,
+                    category: 'BORROW_REPAYMENT',
+                    description: `Repaid to ${existing.personName}${existing.description ? ` - ${existing.description}` : ''}`,
+                }
+            });
+
+            // Trigger Rating Engine Update
+            try {
+                await RatingEngine.checkAndFinalizePastDays(session.userId);
+                await RatingEngine.processEvent({ type: 'EXPENSE_LOGGED', userId: session.userId });
+            } catch (e) {
+                console.error('Rating update failed:', e);
+            }
+        }
 
         return NextResponse.json({ success: true, record });
     } catch (error: any) {
